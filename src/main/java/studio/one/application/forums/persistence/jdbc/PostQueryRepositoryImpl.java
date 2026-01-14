@@ -11,6 +11,14 @@ import studio.one.platform.data.sqlquery.annotation.SqlMappedStatement;
 import studio.one.platform.data.sqlquery.mapping.BoundSql;
 import studio.one.platform.data.sqlquery.mapping.MappedStatement;
 
+/**
+ * Forums JDBC 영속성 어댑터.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 @Repository
 public class PostQueryRepositoryImpl implements PostQueryRepository {
     private static final Map<String, String> FIELD_TO_COLUMN = Map.of(

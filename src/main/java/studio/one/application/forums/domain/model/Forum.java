@@ -6,6 +6,14 @@ import lombok.Getter;
 import lombok.experimental.Accessors;
 import studio.one.application.forums.domain.vo.ForumSlug;
 
+/**
+ * Forums 도메인 모델.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 @Getter
 @AllArgsConstructor
 @Accessors(fluent = true)

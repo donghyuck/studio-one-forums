@@ -22,6 +22,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.cache.CacheManager;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -43,10 +44,16 @@ import studio.one.application.forums.persistence.jpa.repo.CategoryJpaRepository;
 import studio.one.application.forums.persistence.jpa.repo.ForumJpaRepository;
 import studio.one.application.forums.persistence.jpa.repo.PostJpaRepository;
 import studio.one.application.forums.persistence.jpa.repo.TopicJpaRepository;
+import studio.one.application.forums.web.controller.CategoryAdminController;
 import studio.one.application.forums.web.controller.CategoryController;
+import studio.one.application.forums.web.controller.ForumAclAdminController;
+import studio.one.application.forums.web.controller.ForumAdminController;
 import studio.one.application.forums.web.controller.ForumController;
+import studio.one.application.forums.web.controller.PostAdminController;
 import studio.one.application.forums.web.controller.PostController;
+import studio.one.application.forums.web.controller.TopicAdminController;
 import studio.one.application.forums.web.controller.TopicController;
+import studio.one.application.forums.domain.event.listener.ForumsCacheEvictListener;
 import studio.one.platform.autoconfigure.EntityScanRegistrarSupport;
 import studio.one.platform.autoconfigure.I18nKeys;
 import studio.one.platform.autoconfigure.PersistenceProperties;
@@ -68,6 +75,14 @@ import studio.one.platform.util.LogUtils;
             @Filter(type = FilterType.ANNOTATION, classes = ControllerAdvice.class),
             @Filter(type = FilterType.REGEX, pattern = "studio\\.one\\.application\\.forums\\.persistence\\..*")
         })
+/**
+ * Forums 자동 설정.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 @ConditionalOnProperty(prefix = PropertyKeys.Features.PREFIX + ".forums", name = "enabled", havingValue = "true", matchIfMissing = false)
 @Slf4j
 public class ForumsAutoConfiguration {
@@ -184,7 +199,29 @@ public class ForumsAutoConfiguration {
 
     @Configuration
     @ConditionalOnProperty(prefix = PropertyKeys.Features.PREFIX + ".forums.web", name = "enabled", havingValue = "true", matchIfMissing = true)
-    @Import({ ForumController.class, CategoryController.class, TopicController.class, PostController.class })
+    @Import({
+        ForumController.class,
+        CategoryController.class,
+        TopicController.class,
+        PostController.class,
+        ForumAclAdminController.class,
+        ForumAdminController.class,
+        CategoryAdminController.class,
+        TopicAdminController.class,
+        PostAdminController.class
+    })
     static class ForumsWebConfig {
+
+        @Bean
+        @ConditionalOnBean(CacheManager.class)
+        @ConditionalOnProperty(prefix = PropertyKeys.Features.PREFIX + ".forums.cache", name = "enabled", havingValue = "true", matchIfMissing = true)
+        ForumsCacheEvictListener forumsCacheEvictListener(ObjectProvider<CacheManager> cacheManagerProvider,
+                                                          ObjectProvider<I18n> i18nProvider) {
+            I18n i18n = I18nUtils.resolve(i18nProvider);
+            log.info(LogUtils.format(i18n, I18nKeys.AutoConfig.Feature.Service.DETAILS, FEATURE_NAME,
+                LogUtils.blue(ForumsCacheEvictListener.class, true),
+                LogUtils.red(State.CREATED.toString())));
+            return new ForumsCacheEvictListener(cacheManagerProvider.getIfAvailable());
+        }
     }
 }

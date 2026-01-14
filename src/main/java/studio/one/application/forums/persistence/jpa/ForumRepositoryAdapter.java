@@ -8,6 +8,14 @@ import studio.one.application.forums.domain.vo.ForumSlug;
 import studio.one.application.forums.persistence.jpa.entity.ForumEntity;
 import studio.one.application.forums.persistence.jpa.repo.ForumJpaRepository;
 
+/**
+ * Forums JPA 영속성 어댑터.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 @Repository
 public class ForumRepositoryAdapter implements ForumRepository {
     private final ForumJpaRepository forumJpaRepository;

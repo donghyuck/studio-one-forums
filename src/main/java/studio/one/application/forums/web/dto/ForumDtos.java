@@ -2,29 +2,48 @@ package studio.one.application.forums.web.dto;
 
 import java.time.OffsetDateTime;
 
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Forums 웹 API DTO.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 public class ForumDtos {
+    @Getter
+    @Setter
     public static class CreateForumRequest {
-        public String slug;
-        public String name;
-        public String description;
+        private String slug;
+        private String name;
+        private String description;
     }
 
+    @Getter
+    @Setter
     public static class UpdateForumSettingsRequest {
-        public String name;
-        public String description;
+        private String name;
+        private String description;
     }
 
+    @Getter
+    @Setter
     public static class ForumResponse {
-        public Long id;
-        public String slug;
-        public String name;
-        public String description;
-        public OffsetDateTime updatedAt;
+        private Long id;
+        private String slug;
+        private String name;
+        private String description;
+        private OffsetDateTime updatedAt;
     }
 
+    @Getter
+    @Setter
     public static class ForumSummaryResponse {
-        public String slug;
-        public String name;
-        public OffsetDateTime updatedAt;
+        private String slug;
+        private String name;
+        private OffsetDateTime updatedAt;
     }
 }

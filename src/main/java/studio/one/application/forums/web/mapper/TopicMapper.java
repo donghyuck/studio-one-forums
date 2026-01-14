@@ -7,14 +7,22 @@ import studio.one.application.forums.service.topic.query.TopicDetailView;
 import studio.one.application.forums.service.topic.query.TopicSummaryView;
 import studio.one.application.forums.web.dto.TopicDtos;
 
+/**
+ * Forums 웹 매퍼.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 public class TopicMapper {
     public CreateTopicCommand toCreateCommand(String forumSlug, TopicDtos.CreateTopicRequest request,
                                               Long createdById, String createdBy) {
         return new CreateTopicCommand(
             forumSlug,
-            request.categoryId,
-            request.title,
-            request.tags,
+            request.getCategoryId(),
+            request.getTitle(),
+            request.getTags(),
             createdById,
             createdBy
         );
@@ -26,7 +34,7 @@ public class TopicMapper {
         return new ChangeTopicStatusCommand(
             forumSlug,
             topicId,
-            TopicStatus.valueOf(request.status),
+            TopicStatus.valueOf(request.getStatus()),
             updatedById,
             updatedBy,
             version
@@ -35,21 +43,21 @@ public class TopicMapper {
 
     public TopicDtos.TopicResponse toResponse(TopicDetailView view) {
         TopicDtos.TopicResponse response = new TopicDtos.TopicResponse();
-        response.id = view.getId();
-        response.categoryId = view.getCategoryId();
-        response.title = view.getTitle();
-        response.tags = view.getTags();
-        response.status = view.getStatus();
-        response.updatedAt = view.getUpdatedAt();
+        response.setId(view.getId());
+        response.setCategoryId(view.getCategoryId());
+        response.setTitle(view.getTitle());
+        response.setTags(view.getTags());
+        response.setStatus(view.getStatus());
+        response.setUpdatedAt(view.getUpdatedAt());
         return response;
     }
 
     public TopicDtos.TopicSummaryResponse toSummaryResponse(TopicSummaryView view) {
         TopicDtos.TopicSummaryResponse response = new TopicDtos.TopicSummaryResponse();
-        response.id = view.getId();
-        response.title = view.getTitle();
-        response.status = view.getStatus();
-        response.updatedAt = view.getUpdatedAt();
+        response.setId(view.getId());
+        response.setTitle(view.getTitle());
+        response.setStatus(view.getStatus());
+        response.setUpdatedAt(view.getUpdatedAt());
         return response;
     }
 }

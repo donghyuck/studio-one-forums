@@ -4,14 +4,22 @@ import studio.one.application.forums.service.category.command.CreateCategoryComm
 import studio.one.application.forums.service.category.query.CategorySummaryView;
 import studio.one.application.forums.web.dto.CategoryDtos;
 
+/**
+ * Forums 웹 매퍼.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 public class CategoryMapper {
     public CreateCategoryCommand toCreateCommand(String forumSlug, CategoryDtos.CreateCategoryRequest request,
                                                  Long createdById, String createdBy) {
         return new CreateCategoryCommand(
             forumSlug,
-            request.name,
-            request.description,
-            request.position,
+            request.getName(),
+            request.getDescription(),
+            request.getPosition(),
             createdById,
             createdBy
         );
@@ -19,10 +27,10 @@ public class CategoryMapper {
 
     public CategoryDtos.CategoryResponse toResponse(CategorySummaryView view) {
         CategoryDtos.CategoryResponse response = new CategoryDtos.CategoryResponse();
-        response.id = view.getId();
-        response.name = view.getName();
-        response.description = view.getDescription();
-        response.position = view.getPosition();
+        response.setId(view.getId());
+        response.setName(view.getName());
+        response.setDescription(view.getDescription());
+        response.setPosition(view.getPosition());
         return response;
     }
 }

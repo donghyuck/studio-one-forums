@@ -2,6 +2,21 @@ package studio.one.application.forums.service.topic.command;
 
 import java.util.List;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.experimental.Accessors;
+
+/**
+ * Forums 유스케이스 커맨드.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
+@Getter
+@AllArgsConstructor
+@Accessors(fluent = true)
 public class CreateTopicCommand {
     private final String forumSlug;
     private final Long categoryId;
@@ -9,37 +24,4 @@ public class CreateTopicCommand {
     private final List<String> tags;
     private final Long createdById;
     private final String createdBy;
-
-    public CreateTopicCommand(String forumSlug, Long categoryId, String title, List<String> tags, Long createdById, String createdBy) {
-        this.forumSlug = forumSlug;
-        this.categoryId = categoryId;
-        this.title = title;
-        this.tags = tags;
-        this.createdById = createdById;
-        this.createdBy = createdBy;
-    }
-
-    public String forumSlug() {
-        return forumSlug;
-    }
-
-    public Long categoryId() {
-        return categoryId;
-    }
-
-    public String title() {
-        return title;
-    }
-
-    public List<String> tags() {
-        return tags;
-    }
-
-    public Long createdById() {
-        return createdById;
-    }
-
-    public String createdBy() {
-        return createdBy;
-    }
 }

@@ -1,8 +1,11 @@
 package studio.one.application.forums.service.forum;
 
 import java.time.OffsetDateTime;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import studio.one.application.forums.domain.event.ForumCreatedEvent;
+import studio.one.application.forums.domain.event.ForumUpdatedEvent;
 import studio.one.application.forums.domain.exception.ForumNotFoundException;
 import studio.one.application.forums.domain.exception.ForumSlugConflictException;
 import studio.one.application.forums.domain.exception.ForumVersionMismatchException;
@@ -12,12 +15,22 @@ import studio.one.application.forums.domain.vo.ForumSlug;
 import studio.one.application.forums.service.forum.command.CreateForumCommand;
 import studio.one.application.forums.service.forum.command.UpdateForumSettingsCommand;
 
+/**
+ * Forums 명령 서비스.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 @Service
 public class ForumCommandService {
     private final ForumRepository forumRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public ForumCommandService(ForumRepository forumRepository) {
+    public ForumCommandService(ForumRepository forumRepository, ApplicationEventPublisher eventPublisher) {
         this.forumRepository = forumRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -40,7 +53,9 @@ public class ForumCommandService {
             now,
             0L
         );
-        return forumRepository.save(forum);
+        Forum saved = forumRepository.save(forum);
+        eventPublisher.publishEvent(new ForumCreatedEvent(saved.slug().value(), null, now));
+        return saved;
     }
 
     @Transactional
@@ -51,7 +66,10 @@ public class ForumCommandService {
         if (forum.version() != command.expectedVersion()) {
             throw ForumVersionMismatchException.bySlug(slug.value());
         }
-        forum.updateSettings(command.name(), command.description(), command.updatedById(), command.updatedBy(), OffsetDateTime.now());
-        return forumRepository.save(forum);
+        OffsetDateTime now = OffsetDateTime.now();
+        forum.updateSettings(command.name(), command.description(), command.updatedById(), command.updatedBy(), now);
+        Forum saved = forumRepository.save(forum);
+        eventPublisher.publishEvent(new ForumUpdatedEvent(saved.slug().value(), null, now));
+        return saved;
     }
 }

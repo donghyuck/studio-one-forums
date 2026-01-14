@@ -21,6 +21,14 @@ import studio.one.application.forums.domain.repository.TopicRepository;
 import studio.one.application.forums.domain.type.TopicStatus;
 import studio.one.platform.data.sqlquery.annotation.SqlStatement;
 
+/**
+ * Forums JDBC 영속성 어댑터.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 @Repository
 public class TopicJdbcRepositoryAdapter implements TopicRepository {
     private final NamedParameterJdbcTemplate jdbcTemplate;

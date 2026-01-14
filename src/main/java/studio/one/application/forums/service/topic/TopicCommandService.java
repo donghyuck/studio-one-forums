@@ -1,8 +1,11 @@
 package studio.one.application.forums.service.topic;
 
 import java.time.OffsetDateTime;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import studio.one.application.forums.domain.event.TopicCreatedEvent;
+import studio.one.application.forums.domain.event.TopicStatusChangedEvent;
 import studio.one.application.forums.domain.exception.CategoryForumMismatchException;
 import studio.one.application.forums.domain.exception.CategoryNotFoundException;
 import studio.one.application.forums.domain.exception.ForumNotFoundException;
@@ -21,21 +24,32 @@ import studio.one.application.forums.domain.vo.ForumSlug;
 import studio.one.application.forums.service.topic.command.ChangeTopicStatusCommand;
 import studio.one.application.forums.service.topic.command.CreateTopicCommand;
 
+/**
+ * Forums 명령 서비스.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 @Service
 public class TopicCommandService {
     private final ForumRepository forumRepository;
     private final CategoryRepository categoryRepository;
     private final TopicRepository topicRepository;
     private final TopicStatusPolicy topicStatusPolicy;
+    private final ApplicationEventPublisher eventPublisher;
 
     public TopicCommandService(ForumRepository forumRepository,
                                CategoryRepository categoryRepository,
                                TopicRepository topicRepository,
-                               TopicStatusPolicy topicStatusPolicy) {
+                               TopicStatusPolicy topicStatusPolicy,
+                               ApplicationEventPublisher eventPublisher) {
         this.forumRepository = forumRepository;
         this.categoryRepository = categoryRepository;
         this.topicRepository = topicRepository;
         this.topicStatusPolicy = topicStatusPolicy;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -63,7 +77,9 @@ public class TopicCommandService {
             now,
             0L
         );
-        return topicRepository.save(topic);
+        Topic saved = topicRepository.save(topic);
+        eventPublisher.publishEvent(new TopicCreatedEvent(command.forumSlug(), saved.id(), now));
+        return saved;
     }
 
     @Transactional
@@ -76,7 +92,10 @@ public class TopicCommandService {
         if (!topicStatusPolicy.canTransition(topic.status(), command.status())) {
             throw TopicStatusTransitionNotAllowedException.of(topic.status().name(), command.status().name());
         }
-        topic.changeStatus(command.status(), command.updatedById(), command.updatedBy(), OffsetDateTime.now());
-        return topicRepository.save(topic);
+        OffsetDateTime now = OffsetDateTime.now();
+        topic.changeStatus(command.status(), command.updatedById(), command.updatedBy(), now);
+        Topic saved = topicRepository.save(topic);
+        eventPublisher.publishEvent(new TopicStatusChangedEvent(command.forumSlug(), saved.id(), now));
+        return saved;
     }
 }

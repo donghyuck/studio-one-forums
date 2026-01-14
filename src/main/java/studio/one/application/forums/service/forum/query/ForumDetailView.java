@@ -2,6 +2,19 @@ package studio.one.application.forums.service.forum.query;
 
 import java.time.OffsetDateTime;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+/**
+ * Forums 조회 모델.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
+@Getter
+@AllArgsConstructor
 public class ForumDetailView {
     private final Long id;
     private final String slug;
@@ -9,37 +22,4 @@ public class ForumDetailView {
     private final String description;
     private final OffsetDateTime updatedAt;
     private final long version;
-
-    public ForumDetailView(Long id, String slug, String name, String description, OffsetDateTime updatedAt, long version) {
-        this.id = id;
-        this.slug = slug;
-        this.name = name;
-        this.description = description;
-        this.updatedAt = updatedAt;
-        this.version = version;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getSlug() {
-        return slug;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public long getVersion() {
-        return version;
-    }
 }

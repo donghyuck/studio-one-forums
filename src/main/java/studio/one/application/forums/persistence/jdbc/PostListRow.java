@@ -2,6 +2,14 @@ package studio.one.application.forums.persistence.jdbc;
 
 import java.time.OffsetDateTime;
 
+/**
+ * Forums JDBC 영속성 어댑터.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 public class PostListRow {
     
     private final Long postId;

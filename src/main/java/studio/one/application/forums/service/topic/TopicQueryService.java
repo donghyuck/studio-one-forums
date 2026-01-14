@@ -3,8 +3,10 @@ package studio.one.application.forums.service.topic;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import studio.one.application.forums.constant.CacheNames;
 import studio.one.application.forums.domain.exception.ForumNotFoundException;
 import studio.one.application.forums.domain.exception.TopicNotFoundException;
 import studio.one.application.forums.domain.model.Forum;
@@ -17,6 +19,14 @@ import studio.one.application.forums.persistence.jdbc.TopicQueryRepository;
 import studio.one.application.forums.service.topic.query.TopicDetailView;
 import studio.one.application.forums.service.topic.query.TopicSummaryView;
 
+/**
+ * Forums 조회 서비스.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 @Service
 public class TopicQueryService {
     private final ForumRepository forumRepository;
@@ -31,6 +41,10 @@ public class TopicQueryService {
         this.topicQueryRepository = topicQueryRepository;
     }
 
+    @Cacheable(cacheNames = CacheNames.Topic.BY_ID,
+               key = "new org.springframework.cache.interceptor.SimpleKey(#forumSlug, #topicId)",
+               condition = "@forumsFeatureProperties.cache.enabled",
+               unless = "#result == null")
     public TopicDetailView getTopic(String forumSlug, Long topicId) {
         Forum forum = forumRepository.findBySlug(ForumSlug.of(forumSlug))
             .orElseThrow(() -> ForumNotFoundException.bySlug(forumSlug));
@@ -50,6 +64,9 @@ public class TopicQueryService {
         );
     }
 
+    @Cacheable(cacheResolver = "forumTopicListCacheResolver",
+               key = "new org.springframework.cache.interceptor.SimpleKey(#query, #inFields, #fields, #pageable)",
+               condition = "@forumsFeatureProperties.cache.enabled")
     public List<TopicSummaryView> listTopics(String forumSlug, String query, Set<String> inFields,
                                              Set<String> fields, Pageable pageable) {
         Forum forum = forumRepository.findBySlug(ForumSlug.of(forumSlug))

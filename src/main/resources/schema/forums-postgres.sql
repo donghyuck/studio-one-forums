@@ -1,4 +1,4 @@
-create table if not exists tb_forums (
+create table if not exists tb_application_forums (
     id bigserial primary key,
     slug varchar(120) not null unique,
     name varchar(200) not null,
@@ -12,9 +12,9 @@ create table if not exists tb_forums (
     version bigint not null default 0
 );
 
-create table if not exists tb_categories (
+create table if not exists tb_application_categories (
     id bigserial primary key,
-    forum_id bigint not null references tb_forums(id) on delete cascade,
+    forum_id bigint not null references tb_application_forums(id) on delete cascade,
     name varchar(200) not null,
     description text,
     position int not null,
@@ -27,10 +27,10 @@ create table if not exists tb_categories (
     version bigint not null default 0
 );
 
-create table if not exists tb_topics (
+create table if not exists tb_application_topics (
     id bigserial primary key,
-    forum_id bigint not null references tb_forums(id) on delete cascade,
-    category_id bigint not null references tb_categories(id) on delete cascade,
+    forum_id bigint not null references tb_application_forums(id) on delete cascade,
+    category_id bigint not null references tb_application_categories(id) on delete cascade,
     title varchar(400) not null,
     tags varchar(2000),
     status varchar(30) not null,
@@ -43,9 +43,9 @@ create table if not exists tb_topics (
     version bigint not null default 0
 );
 
-create table if not exists tb_posts (
+create table if not exists tb_application_posts (
     id bigserial primary key,
-    topic_id bigint not null references tb_topics(id) on delete cascade,
+    topic_id bigint not null references tb_application_topics(id) on delete cascade,
     content text not null,
     created_by_id bigint not null,
     created_by varchar(120) not null,
@@ -56,5 +56,5 @@ create table if not exists tb_posts (
     version bigint not null default 0
 );
 
-create index if not exists idx_topics_forum_updated on tb_topics (forum_id, updated_at desc);
-create index if not exists idx_posts_topic_created on tb_posts (topic_id, created_at asc);
+create index if not exists idx_topics_forum_updated on tb_application_topics (forum_id, updated_at desc);
+create index if not exists idx_posts_topic_created on tb_application_posts (topic_id, created_at asc);
