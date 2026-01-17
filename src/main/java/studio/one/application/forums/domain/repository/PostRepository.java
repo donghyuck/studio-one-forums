@@ -1,6 +1,7 @@
 package studio.one.application.forums.domain.repository;
 
 import java.util.List;
+import java.util.Optional;
 import studio.one.application.forums.domain.model.Post;
 
 /**
@@ -13,6 +14,8 @@ import studio.one.application.forums.domain.model.Post;
  */
 public interface PostRepository {
     Post save(Post post);
+
+    Optional<Post> findById(Long postId);
 
     List<Post> findByTopicId(Long topicId);
 }

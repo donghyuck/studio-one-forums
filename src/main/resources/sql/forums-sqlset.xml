@@ -3,8 +3,11 @@
     <sql id="topicList">
         <dynamic><![CDATA[
         select ${selectClause}
-        from tb_topics t
+        from tb_application_topics t
         where t.forum_id = :forumId
+        <#if includeDeleted?? && includeDeleted == false>
+        and t.deleted_at is null
+        </#if>
         <#if searchClause?? && searchClause?length gt 0>
         ${searchClause}
         </#if>
@@ -16,15 +19,15 @@
     </sql>
     <sql id="forumInsert">
         <![CDATA[
-        insert into tb_forums
-            (slug, name, description, created_by_id, created_by, created_at, updated_by_id, updated_by, updated_at, version)
+        insert into tb_application_forums
+            (slug, name, description, type, created_by_id, created_by, created_at, updated_by_id, updated_by, updated_at, version)
         values
-            (:slug, :name, :description, :createdById, :createdBy, :createdAt, :updatedById, :updatedBy, :updatedAt, :version)
+            (:slug, :name, :description, :type, :createdById, :createdBy, :createdAt, :updatedById, :updatedBy, :updatedAt, :version)
         ]]>
     </sql>
     <sql id="forumUpdate">
         <![CDATA[
-        update tb_forums
+        update tb_application_forums
            set name = :name,
                description = :description,
                updated_by_id = :updatedById,
@@ -37,38 +40,102 @@
     </sql>
     <sql id="forumSelectById">
         <![CDATA[
-        select id, slug, name, description, created_by_id, created_by, created_at,
+        select id, slug, name, description, type, created_by_id, created_by, created_at,
                updated_by_id, updated_by, updated_at, version
-          from tb_forums
+          from tb_application_forums
          where id = :id
         ]]>
     </sql>
     <sql id="forumSelectBySlug">
         <![CDATA[
-        select id, slug, name, description, created_by_id, created_by, created_at,
+        select id, slug, name, description, type, created_by_id, created_by, created_at,
                updated_by_id, updated_by, updated_at, version
-          from tb_forums
+          from tb_application_forums
          where slug = :slug
         ]]>
     </sql>
     <sql id="forumSelectAll">
         <![CDATA[
-        select id, slug, name, description, created_by_id, created_by, created_at,
+        select id, slug, name, description, type, created_by_id, created_by, created_at,
                updated_by_id, updated_by, updated_at, version
-          from tb_forums
+          from tb_application_forums
          order by updated_at desc, id desc
         ]]>
+    </sql>
+    <sql id="forumList">
+        <dynamic><![CDATA[
+        select id, slug, name, description, type, created_by_id, created_by, created_at,
+               updated_by_id, updated_by, updated_at, version
+          from tb_application_forums f
+         where 1 = 1
+        <#if searchClause?? && searchClause?length gt 0>
+        ${searchClause}
+        </#if>
+        <#if orderClause?? && orderClause?length gt 0>
+        ${orderClause}
+        </#if>
+        limit :limit offset :offset
+        ]]></dynamic>
+    </sql>
+    <sql id="forumListVisible">
+        <dynamic><![CDATA[
+        select id, slug, name, description, type, created_by_id, created_by, created_at,
+               updated_by_id, updated_by, updated_at, version
+          from tb_application_forums f
+         where 1 = 1
+        <#if searchClause?? && searchClause?length gt 0>
+        ${searchClause}
+        </#if>
+        <#if visibilityClause?? && visibilityClause?length gt 0>
+        ${visibilityClause}
+        </#if>
+        <#if orderClause?? && orderClause?length gt 0>
+        ${orderClause}
+        </#if>
+        ]]></dynamic>
+    </sql>
+    <sql id="forumCount">
+        <dynamic><![CDATA[
+        select count(1)
+          from tb_application_forums f
+         where 1 = 1
+        <#if searchClause?? && searchClause?length gt 0>
+        ${searchClause}
+        </#if>
+        ]]></dynamic>
     </sql>
     <sql id="forumExistsBySlug">
         <![CDATA[
         select count(1)
-          from tb_forums
+          from tb_application_forums
          where slug = :slug
+        ]]>
+    </sql>
+    <sql id="forumPropertySelectByForumId">
+        <![CDATA[
+        select property_name, property_value
+          from tb_application_forum_property
+         where forum_id = :forumId
+         order by property_name asc
+        ]]>
+    </sql>
+    <sql id="forumPropertyDeleteByForumId">
+        <![CDATA[
+        delete from tb_application_forum_property
+         where forum_id = :forumId
+        ]]>
+    </sql>
+    <sql id="forumPropertyInsert">
+        <![CDATA[
+        insert into tb_application_forum_property
+            (forum_id, property_name, property_value)
+        values
+            (:forumId, :propertyName, :propertyValue)
         ]]>
     </sql>
     <sql id="categoryInsert">
         <![CDATA[
-        insert into tb_categories
+        insert into tb_application_categories
             (forum_id, name, description, position, created_by_id, created_by, created_at, updated_by_id, updated_by, updated_at, version)
         values
             (:forumId, :name, :description, :position, :createdById, :createdBy, :createdAt, :updatedById, :updatedBy, :updatedAt, :version)
@@ -76,7 +143,7 @@
     </sql>
     <sql id="categoryUpdate">
         <![CDATA[
-        update tb_categories
+        update tb_application_categories
            set name = :name,
                description = :description,
                position = :position,
@@ -90,7 +157,7 @@
         <![CDATA[
         select id, forum_id, name, description, position, created_by_id, created_by, created_at,
                updated_by_id, updated_by, updated_at
-          from tb_categories
+          from tb_application_categories
          where id = :id
         ]]>
     </sql>
@@ -98,30 +165,40 @@
         <![CDATA[
         select id, forum_id, name, description, position, created_by_id, created_by, created_at,
                updated_by_id, updated_by, updated_at
-          from tb_categories
+          from tb_application_categories
          where forum_id = :forumId
          order by position asc, id asc
         ]]>
     </sql>
+    <sql id="categoryDelete">
+        <![CDATA[
+        delete from tb_application_categories
+         where id = :id
+        ]]>
+    </sql>
     <sql id="topicInsert">
         <![CDATA[
-        insert into tb_topics
-            (forum_id, category_id, title, tags, status, created_by_id, created_by, created_at,
-             updated_by_id, updated_by, updated_at, version)
+        insert into tb_application_topics
+            (forum_id, category_id, title, tags, status, pinned, locked, created_by_id, created_by, created_at,
+             updated_by_id, updated_by, updated_at, deleted_at, deleted_by_id, version)
         values
-            (:forumId, :categoryId, :title, :tags, :status, :createdById, :createdBy, :createdAt,
-             :updatedById, :updatedBy, :updatedAt, :version)
+            (:forumId, :categoryId, :title, :tags, :status, :pinned, :locked, :createdById, :createdBy, :createdAt,
+             :updatedById, :updatedBy, :updatedAt, :deletedAt, :deletedById, :version)
         ]]>
     </sql>
     <sql id="topicUpdate">
         <![CDATA[
-        update tb_topics
+        update tb_application_topics
            set title = :title,
                tags = :tags,
                status = :status,
+               pinned = :pinned,
+               locked = :locked,
                updated_by_id = :updatedById,
                updated_by = :updatedBy,
                updated_at = :updatedAt,
+               deleted_at = :deletedAt,
+               deleted_by_id = :deletedById,
                version = version + 1
          where id = :id
            and version = :version
@@ -129,44 +206,67 @@
     </sql>
     <sql id="topicSelectById">
         <![CDATA[
-        select id, forum_id, category_id, title, tags, status, created_by_id, created_by, created_at,
-               updated_by_id, updated_by, updated_at, version
-          from tb_topics
+        select id, forum_id, category_id, title, tags, status, pinned, locked,
+               created_by_id, created_by, created_at, updated_by_id, updated_by, updated_at,
+               deleted_at, deleted_by_id, version
+          from tb_application_topics
          where id = :id
         ]]>
     </sql>
     <sql id="postInsert">
         <![CDATA[
-        insert into tb_posts
-            (topic_id, content, created_by_id, created_by, created_at, updated_by_id, updated_by, updated_at, version)
+        insert into tb_application_posts
+            (topic_id, content, created_by_id, created_by, created_at, updated_by_id, updated_by, updated_at,
+             deleted_at, deleted_by_id, hidden_at, hidden_by_id, version)
         values
-            (:topicId, :content, :createdById, :createdBy, :createdAt, :updatedById, :updatedBy, :updatedAt, :version)
+            (:topicId, :content, :createdById, :createdBy, :createdAt, :updatedById, :updatedBy, :updatedAt,
+             :deletedAt, :deletedById, :hiddenAt, :hiddenById, :version)
         ]]>
     </sql>
     <sql id="postUpdate">
         <![CDATA[
-        update tb_posts
+        update tb_application_posts
            set content = :content,
                updated_by_id = :updatedById,
                updated_by = :updatedBy,
-               updated_at = :updatedAt
+               updated_at = :updatedAt,
+               deleted_at = :deletedAt,
+               deleted_by_id = :deletedById,
+               hidden_at = :hiddenAt,
+               hidden_by_id = :hiddenById,
+               version = version + 1
          where id = :id
+           and version = :version
         ]]>
     </sql>
     <sql id="postSelectByTopic">
         <![CDATA[
         select id, topic_id, content, created_by_id, created_by, created_at,
-               updated_by_id, updated_by, updated_at
-          from tb_posts
+               updated_by_id, updated_by, updated_at, deleted_at, deleted_by_id, hidden_at, hidden_by_id, version
+          from tb_application_posts
          where topic_id = :topicId
          order by created_at asc
         ]]>
     </sql>
+    <sql id="postSelectById">
+        <![CDATA[
+        select id, topic_id, content, created_by_id, created_by, created_at,
+               updated_by_id, updated_by, updated_at, deleted_at, deleted_by_id, hidden_at, hidden_by_id, version
+          from tb_application_posts
+         where id = :postId
+        ]]>
+    </sql>
     <sql id="postList">
         <dynamic><![CDATA[
-        select p.id as post_id, p.content, p.created_by_id, p.created_by, p.created_at
-        from tb_posts p
+        select p.id as post_id, p.content, p.created_by_id, p.created_by, p.created_at, p.version
+        from tb_application_posts p
         where p.topic_id = :topicId
+        <#if includeDeleted?? && includeDeleted == false>
+        and p.deleted_at is null
+        </#if>
+        <#if includeHidden?? && includeHidden == false>
+        and p.hidden_at is null
+        </#if>
         <#if orderClause?? && orderClause?length gt 0>
         ${orderClause}
         </#if>

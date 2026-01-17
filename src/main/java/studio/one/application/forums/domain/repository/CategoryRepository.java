@@ -18,4 +18,6 @@ public interface CategoryRepository {
     Optional<Category> findById(Long categoryId);
 
     List<Category> findByForumId(Long forumId);
+
+    void deleteById(Long categoryId);
 }

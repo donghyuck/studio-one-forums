@@ -31,6 +31,18 @@ public class TopicDtos {
 
     @Getter
     @Setter
+    public static class PinTopicRequest {
+        private boolean pinned;
+    }
+
+    @Getter
+    @Setter
+    public static class LockTopicRequest {
+        private boolean locked;
+    }
+
+    @Getter
+    @Setter
     public static class TopicResponse {
         private Long id;
         private Long categoryId;

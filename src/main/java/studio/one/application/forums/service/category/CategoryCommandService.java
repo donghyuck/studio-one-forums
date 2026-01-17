@@ -5,6 +5,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import studio.one.application.forums.domain.event.CategoryCreatedEvent;
+import studio.one.application.forums.domain.event.CategoryDeletedEvent;
+import studio.one.application.forums.domain.exception.CategoryForumMismatchException;
+import studio.one.application.forums.domain.exception.CategoryNotFoundException;
 import studio.one.application.forums.domain.exception.ForumNotFoundException;
 import studio.one.application.forums.domain.model.Category;
 import studio.one.application.forums.domain.model.Forum;
@@ -56,5 +59,18 @@ public class CategoryCommandService {
         Category saved = categoryRepository.save(category);
         eventPublisher.publishEvent(new CategoryCreatedEvent(command.forumSlug(), null, now));
         return saved;
+    }
+
+    @Transactional
+    public void deleteCategory(String forumSlug, Long categoryId) {
+        Forum forum = forumRepository.findBySlug(ForumSlug.of(forumSlug))
+            .orElseThrow(() -> ForumNotFoundException.bySlug(forumSlug));
+        Category category = categoryRepository.findById(categoryId)
+            .orElseThrow(() -> CategoryNotFoundException.byId(categoryId));
+        if (!category.forumId().equals(forum.id())) {
+            throw CategoryForumMismatchException.of(category.id(), forum.id());
+        }
+        categoryRepository.deleteById(categoryId);
+        eventPublisher.publishEvent(new CategoryDeletedEvent(forumSlug, null, OffsetDateTime.now()));
     }
 }

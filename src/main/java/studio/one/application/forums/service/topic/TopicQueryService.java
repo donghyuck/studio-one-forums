@@ -43,13 +43,16 @@ public class TopicQueryService {
 
     @Cacheable(cacheNames = CacheNames.Topic.BY_ID,
                key = "new org.springframework.cache.interceptor.SimpleKey(#forumSlug, #topicId)",
-               condition = "@forumsFeatureProperties.cache.enabled",
+               condition = "@environment.getProperty('studio.features.forums.cache.enabled','true') == 'true'",
                unless = "#result == null")
     public TopicDetailView getTopic(String forumSlug, Long topicId) {
         Forum forum = forumRepository.findBySlug(ForumSlug.of(forumSlug))
             .orElseThrow(() -> ForumNotFoundException.bySlug(forumSlug));
         Topic topic = topicRepository.findById(topicId)
             .orElseThrow(() -> TopicNotFoundException.byId(topicId));
+        if (topic.deletedAt() != null) {
+            throw TopicNotFoundException.byId(topicId);
+        }
         if (!topic.forumId().equals(forum.id())) {
             throw TopicNotFoundException.inForum(topicId, forum.id());
         }
@@ -66,12 +69,12 @@ public class TopicQueryService {
 
     @Cacheable(cacheResolver = "forumTopicListCacheResolver",
                key = "new org.springframework.cache.interceptor.SimpleKey(#query, #inFields, #fields, #pageable)",
-               condition = "@forumsFeatureProperties.cache.enabled")
+               condition = "@environment.getProperty('studio.features.forums.cache.enabled','true') == 'true'")
     public List<TopicSummaryView> listTopics(String forumSlug, String query, Set<String> inFields,
-                                             Set<String> fields, Pageable pageable) {
+                                             Set<String> fields, Pageable pageable, boolean includeDeleted) {
         Forum forum = forumRepository.findBySlug(ForumSlug.of(forumSlug))
             .orElseThrow(() -> ForumNotFoundException.bySlug(forumSlug));
-        return topicQueryRepository.findTopics(forum.id(), query, inFields, fields, pageable)
+        return topicQueryRepository.findTopics(forum.id(), query, inFields, fields, pageable, includeDeleted)
             .stream()
             .map(row -> new TopicSummaryView(row.getTopicId(), row.getTitle(), row.getStatus(), row.getUpdatedAt()))
             .collect(Collectors.toList());

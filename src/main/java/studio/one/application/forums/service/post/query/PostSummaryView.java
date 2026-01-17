@@ -21,4 +21,5 @@ public class PostSummaryView {
     private final Long createdById;
     private final String createdBy;
     private final OffsetDateTime createdAt;
+    private final long version;
 }

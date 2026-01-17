@@ -32,7 +32,7 @@ public class CategoryController {
     }
 
     @GetMapping
-    @PreAuthorize("@forumsAuthz.canListCategories(#forumSlug)")
+    @PreAuthorize("@forumAuthz.canBoard(#forumSlug, 'READ_BOARD')")
     public ResponseEntity<ApiResponse<List<CategoryDtos.CategoryResponse>>> listCategories(@PathVariable String forumSlug) {
         List<CategoryDtos.CategoryResponse> responses = categoryQueryService.listCategories(forumSlug)
             .stream()

@@ -71,12 +71,16 @@ public class TopicJdbcRepositoryAdapter implements TopicRepository {
             .addValue("title", topic.title())
             .addValue("tags", joinTags(topic.tags()))
             .addValue("status", topic.status().name())
+            .addValue("pinned", topic.pinned())
+            .addValue("locked", topic.locked())
             .addValue("createdById", topic.createdById())
             .addValue("createdBy", topic.createdBy())
             .addValue("createdAt", topic.createdAt())
             .addValue("updatedById", topic.updatedById())
             .addValue("updatedBy", topic.updatedBy())
             .addValue("updatedAt", topic.updatedAt())
+            .addValue("deletedAt", topic.deletedAt())
+            .addValue("deletedById", topic.deletedById())
             .addValue("version", topic.version());
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -90,27 +94,34 @@ public class TopicJdbcRepositoryAdapter implements TopicRepository {
             topic.title(),
             topic.tags(),
             topic.status(),
+            topic.pinned(),
+            topic.locked(),
             topic.createdById(),
             topic.createdBy(),
             topic.createdAt(),
             topic.updatedById(),
             topic.updatedBy(),
             topic.updatedAt(),
+            topic.deletedAt(),
+            topic.deletedById(),
             topic.version()
         );
     }
 
     private Topic update(Topic topic) {
-        Map<String, Object> params = Map.of(
-            "id", topic.id(),
-            "title", topic.title(),
-            "tags", joinTags(topic.tags()),
-            "status", topic.status().name(),
-            "updatedById", topic.updatedById(),
-            "updatedBy", topic.updatedBy(),
-            "updatedAt", topic.updatedAt(),
-            "version", topic.version()
-        );
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", topic.id())
+            .addValue("title", topic.title())
+            .addValue("tags", joinTags(topic.tags()))
+            .addValue("status", topic.status().name())
+            .addValue("pinned", topic.pinned())
+            .addValue("locked", topic.locked())
+            .addValue("updatedById", topic.updatedById())
+            .addValue("updatedBy", topic.updatedBy())
+            .addValue("updatedAt", topic.updatedAt())
+            .addValue("deletedAt", topic.deletedAt())
+            .addValue("deletedById", topic.deletedById())
+            .addValue("version", topic.version());
         int updated = jdbcTemplate.update(topicUpdateSql, params);
         if (updated == 0) {
             throw TopicVersionMismatchException.byId(topic.id());
@@ -146,12 +157,16 @@ public class TopicJdbcRepositoryAdapter implements TopicRepository {
                 rs.getString("title"),
                 splitTags(rs.getString("tags")),
                 TopicStatus.valueOf(rs.getString("status")),
+                rs.getBoolean("pinned"),
+                rs.getBoolean("locked"),
                 rs.getLong("created_by_id"),
                 rs.getString("created_by"),
                 rs.getObject("created_at", OffsetDateTime.class),
                 rs.getLong("updated_by_id"),
                 rs.getString("updated_by"),
                 rs.getObject("updated_at", OffsetDateTime.class),
+                rs.getObject("deleted_at", OffsetDateTime.class),
+                rs.getObject("deleted_by_id") != null ? rs.getLong("deleted_by_id") : null,
                 rs.getLong("version")
             );
         }

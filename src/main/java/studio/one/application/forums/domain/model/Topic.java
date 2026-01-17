@@ -25,12 +25,16 @@ public class Topic {
     private String title;
     private List<String> tags;
     private TopicStatus status;
+    private boolean pinned;
+    private boolean locked;
     private Long createdById;
     private String createdBy;
     private OffsetDateTime createdAt;
     private Long updatedById;
     private String updatedBy;
     private OffsetDateTime updatedAt;
+    private OffsetDateTime deletedAt;
+    private Long deletedById;
     private final long version;
 
     public void changeStatus(TopicStatus status, Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
@@ -38,5 +42,24 @@ public class Topic {
         this.updatedById = updatedById;
         this.updatedBy = updatedBy;
         this.updatedAt = updatedAt;
+    }
+
+    public void setPinned(boolean pinned, Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
+        this.pinned = pinned;
+        this.updatedById = updatedById;
+        this.updatedBy = updatedBy;
+        this.updatedAt = updatedAt;
+    }
+
+    public void setLocked(boolean locked, Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
+        this.locked = locked;
+        this.updatedById = updatedById;
+        this.updatedBy = updatedBy;
+        this.updatedAt = updatedAt;
+    }
+
+    public void softDelete(Long deletedById, OffsetDateTime deletedAt) {
+        this.deletedById = deletedById;
+        this.deletedAt = deletedAt;
     }
 }

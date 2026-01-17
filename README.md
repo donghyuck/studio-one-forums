@@ -19,12 +19,13 @@ Discourse 스타일의 포럼(Forums) 모듈입니다. 멀티 포럼/카테고�
 - Category: 생성/목록
 - Topic: 생성/목록/상세/상태변경
 - Post: 생성/목록
+- Membership: 게시판별 관리자/운영진/회원 관리
 
 ## 권한별 작업
 Public (사용자)
-- Forum: 목록/상세 조회, 설정 변경
+- Forum: 목록/상세 조회 (게시판 타입/정책에 따라 제한)
 - Category: 목록 조회
-- Topic: 목록/상세 조회, 상태 변경
+- Topic: 목록/상세 조회 (READ_LIST vs READ_CONTENT 분리)
 - Post: 목록 조회
 
 Admin (관리자)
@@ -32,11 +33,12 @@ Admin (관리자)
 - Category: 생성
 - Topic: 생성, 상태 변경
 - Post: 생성
+- Membership: 게시판별 멤버/역할 관리
 
 ## API
 Public
 - POST `/api/forums`
-- GET `/api/forums`
+- GET `/api/forums?q=&in=slug,name,description&page=&size=&sort=`
 - GET `/api/forums/{forumSlug}` (ETag)
 - PUT `/api/forums/{forumSlug}/settings` (If-Match)
 - POST `/api/forums/{forumSlug}/categories`
@@ -54,7 +56,16 @@ Admin
 - POST `/api/mgmt/forums/{forumSlug}/categories`
 - POST `/api/mgmt/forums/{forumSlug}/categories/{categoryId}/topics`
 - PATCH `/api/mgmt/forums/{forumSlug}/topics/{topicId}/status` (If-Match)
+- PATCH `/api/mgmt/forums/{forumSlug}/topics/{topicId}/pin` (If-Match)
+- PATCH `/api/mgmt/forums/{forumSlug}/topics/{topicId}/lock` (If-Match)
+- DELETE `/api/mgmt/forums/{forumSlug}/topics/{topicId}` (If-Match)
 - POST `/api/mgmt/forums/{forumSlug}/topics/{topicId}/posts`
+- PATCH `/api/mgmt/forums/{forumSlug}/topics/{topicId}/posts/{postId}/hide`
+- DELETE `/api/mgmt/forums/{forumSlug}/topics/{topicId}/posts/{postId}`
+- GET `/api/mgmt/forums/{forumSlug}/members?page=&size=`
+- POST `/api/mgmt/forums/{forumSlug}/members`
+- PATCH `/api/mgmt/forums/{forumSlug}/members/{userId}`
+- DELETE `/api/mgmt/forums/{forumSlug}/members/{userId}`
 - GET `/api/mgmt/forums/{forumSlug}/permissions`
 - POST `/api/mgmt/forums/{forumSlug}/permissions`
 - DELETE `/api/mgmt/forums/{forumSlug}/permissions`
@@ -103,6 +114,8 @@ studio.features.forums.cache.detail-ttl=5m
 studio.features.forums.cache.list-max-size=10000
 studio.features.forums.cache.detail-max-size=50000
 studio.features.forums.cache.record-stats=true
+studio.features.forums.authz.admin-roles=ROLE_ADMIN,ADMIN
+studio.features.forums.authz.secret-list-visible=false
 features.forums.persistence=jdbc
 ```
 
@@ -118,6 +131,19 @@ features.forums.persistence=jdbc
 | `studio.features.forums.cache.detail-ttl` | forums 상세 캐시 TTL | `5m` |
 | `studio.features.forums.cache.list-max-size` | forums 목록 캐시 최대 항목 수 | `10000` |
 | `studio.features.forums.cache.detail-max-size` | forums 상세 캐시 최대 항목 수 | `50000` |
+| `studio.features.forums.authz.admin-roles` | 관리자 역할 목록 (쉼표 구분) | `ROLE_ADMIN,ADMIN` |
+| `studio.features.forums.authz.secret-list-visible` | SECRET 게시판 목록 노출 여부 | `false` |
+
+## 게시판 타입 정책
+- COMMON: 누구나 읽기, 회원 쓰기
+- NOTICE: 읽기 누구나, 쓰기는 관리자/운영진만
+- SECRET: 본문은 작성자/관리자만, 목록 노출은 설정으로 제어
+- ADMIN_ONLY: 관리자/운영진만 목록/본문 접근
+
+## 게시판별 멤버십
+- 테이블: `tb_application_forum_member`
+- 역할: `OWNER`, `ADMIN`, `MODERATOR`, `MEMBER`
+- 권한 계산: 글로벌 роли + 게시판별 멤버십을 합쳐서 평가
 | `studio.features.forums.cache.record-stats` | forums 캐시 통계 수집 | `true` |
 | `features.forums.persistence` | persistence 선택 (`jpa` or `jdbc`) | 글로벌 기본값 |
 | `features.forums.entity-packages` | JPA 엔티티 스캔 패키지 | `studio.one.application.forums.persistence.jpa.entity` |

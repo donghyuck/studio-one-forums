@@ -32,7 +32,7 @@ public class CategoryQueryService {
 
     @Cacheable(cacheNames = CacheNames.Category.BY_FORUM,
                key = "#forumSlug",
-               condition = "@forumsFeatureProperties.cache.enabled")
+               condition = "@environment.getProperty('studio.features.forums.cache.enabled','true') == 'true'")
     public List<CategorySummaryView> listCategories(String forumSlug) {
         Forum forum = forumRepository.findBySlug(ForumSlug.of(forumSlug))
             .orElseThrow(() -> ForumNotFoundException.bySlug(forumSlug));

@@ -22,11 +22,19 @@ public class PostDtos {
 
     @Getter
     @Setter
+    public static class HidePostRequest {
+        private boolean hidden;
+        private String reason;
+    }
+
+    @Getter
+    @Setter
     public static class PostResponse {
         private Long id;
         private String content;
         private Long createdById;
         private String createdBy;
         private OffsetDateTime createdAt;
+        private long version;
     }
 }

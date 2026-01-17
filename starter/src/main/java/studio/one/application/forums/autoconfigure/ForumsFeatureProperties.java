@@ -3,6 +3,8 @@ package studio.one.application.forums.autoconfigure;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -26,6 +28,7 @@ public class ForumsFeatureProperties extends FeatureToggle {
 
     private WebEndpointProperties web = new WebEndpointProperties();
     private CacheProperties cache = new CacheProperties();
+    private AuthzProperties authz = new AuthzProperties();
 
     public PersistenceProperties.Type resolvePersistence(PersistenceProperties.Type globalDefault) {
         return super.resolvePersistence(globalDefault);
@@ -40,5 +43,11 @@ public class ForumsFeatureProperties extends FeatureToggle {
         private long listMaxSize = 10_000L;
         private long detailMaxSize = 50_000L;
         private boolean recordStats = true;
+    }
+
+    @Getter
+    @Setter
+    public static class AuthzProperties {
+        private List<String> adminRoles = new ArrayList<>(List.of("ROLE_ADMIN", "ADMIN"));
     }
 }

@@ -45,12 +45,16 @@ public class TopicRepositoryAdapter implements TopicRepository {
             topic.title(),
             joinTags(topic.tags()),
             topic.status().name(),
+            topic.pinned(),
+            topic.locked(),
             topic.createdById(),
             topic.createdBy(),
             topic.createdAt(),
             topic.updatedById(),
             topic.updatedBy(),
-            topic.updatedAt()
+            topic.updatedAt(),
+            topic.deletedAt(),
+            topic.deletedById()
         );
         if (topic.id() != null) {
             entity.setId(topic.id());
@@ -67,12 +71,16 @@ public class TopicRepositoryAdapter implements TopicRepository {
             entity.getTitle(),
             splitTags(entity.getTags()),
             TopicStatus.valueOf(entity.getStatus()),
+            entity.isPinned(),
+            entity.isLocked(),
             entity.getCreatedById(),
             entity.getCreatedBy(),
             entity.getCreatedAt(),
             entity.getUpdatedById(),
             entity.getUpdatedBy(),
             entity.getUpdatedAt(),
+            entity.getDeletedAt(),
+            entity.getDeletedById(),
             entity.getVersion()
         );
     }

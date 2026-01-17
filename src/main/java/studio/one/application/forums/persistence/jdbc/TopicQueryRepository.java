@@ -13,5 +13,6 @@ import org.springframework.data.domain.Pageable;
  * </pre>
  */
 public interface TopicQueryRepository {
-    List<TopicListRow> findTopics(Long forumId, String query, Set<String> inFields, Set<String> fields, Pageable pageable);
+    List<TopicListRow> findTopics(Long forumId, String query, Set<String> inFields, Set<String> fields,
+                                  Pageable pageable, boolean includeDeleted);
 }

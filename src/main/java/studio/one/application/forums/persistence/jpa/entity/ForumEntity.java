@@ -1,13 +1,23 @@
 package studio.one.application.forums.persistence.jpa.entity;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.MapKeyColumn;
 import javax.persistence.Table;
 import javax.persistence.Version;
+import studio.one.application.forums.domain.type.ForumType;
 
 /**
  * Forums JPA 엔티티.
@@ -18,7 +28,7 @@ import javax.persistence.Version;
  * </pre>
  */
 @Entity
-@Table(name = "forums")
+@Table(name = "tb_application_forums")
 public class ForumEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,6 +42,18 @@ public class ForumEntity {
 
     @Column(length = 2000)
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ForumType type;
+ 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "tb_application_forum_property", joinColumns = {
+        @JoinColumn(name = "forum_id", referencedColumnName = "id")
+    })
+    @MapKeyColumn(name = "property_name")
+    @Column(name = "property_value")
+    private Map<String, String> properties = new HashMap<>();
  
     @Column(nullable = false)
     private Long createdById;
@@ -57,12 +79,14 @@ public class ForumEntity {
     protected ForumEntity() {
     }
 
-    public ForumEntity(String slug, String name, String description,
+    public ForumEntity(String slug, String name, String description, ForumType type, Map<String, String> properties,
                        Long createdById, String createdBy, OffsetDateTime createdAt,
                        Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
         this.slug = slug;
         this.name = name;
         this.description = description;
+        this.type = type;
+        this.properties = properties != null ? new HashMap<>(properties) : new HashMap<>();
         this.createdById = createdById;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
@@ -89,6 +113,18 @@ public class ForumEntity {
 
     public String getDescription() {
         return description;
+    }
+
+    public ForumType getType() {
+        return type;
+    }
+
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Map<String, String> properties) {
+        this.properties = properties != null ? new HashMap<>(properties) : new HashMap<>();
     }
 
     public Long getCreatedById() {

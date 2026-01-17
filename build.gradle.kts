@@ -29,6 +29,7 @@ tasks.named<Jar>("jar") {
 dependencies {   
     // studio one
     compileOnly("studio.one.starter:studio-platform-starter:${property("studioOneVersion")}") 
+    
     //compileOnly("studio.one.starter:studio-platform-starter-security:${property("studioOneVersion")}")
     // spring boot
     compileOnly("org.springframework.boot:spring-boot-starter-validation") 
@@ -40,6 +41,7 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-cache")
     compileOnly("com.github.ben-manes.caffeine:caffeine")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.data:spring-data-commons")
     // lombok optional
     val lombokVersion: String = project.findProperty("lombokVersion") as String? ?: "1.18.30"
     compileOnly("org.projectlombok:lombok:$lombokVersion")

@@ -32,6 +32,7 @@ public class TopicQueryRepositoryImpl implements TopicQueryRepository {
         "createdAt", "t.created_at",
         "updatedAt", "t.updated_at"
     );
+    private static final Set<String> SEARCHABLE_FIELDS = Set.of("title", "status");
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
@@ -43,12 +44,14 @@ public class TopicQueryRepositoryImpl implements TopicQueryRepository {
     }
 
     @Override
-    public List<TopicListRow> findTopics(Long forumId, String query, Set<String> inFields, Set<String> fields, Pageable pageable) {
+    public List<TopicListRow> findTopics(Long forumId, String query, Set<String> inFields, Set<String> fields,
+                                         Pageable pageable, boolean includeDeleted) {
         String selectClause = buildSelect(fields);
         String searchClause = buildSearchClause(query, inFields);
         String orderClause = buildOrderClause(pageable, "t.updated_at desc");
         Map<String, Object> params = new HashMap<>();
         params.put("forumId", forumId);
+        params.put("includeDeleted", includeDeleted);
 
         if (!searchClause.isBlank()) {
             params.put("query", "%" + query + "%");
@@ -59,7 +62,8 @@ public class TopicQueryRepositoryImpl implements TopicQueryRepository {
         Map<String, Object> dynamicParams = Map.of(
             "selectClause", selectClause,
             "searchClause", searchClause,
-            "orderClause", orderClause
+            "orderClause", orderClause,
+            "includeDeleted", includeDeleted
         );
         BoundSql boundSql = topicListStatement.getBoundSql(params, dynamicParams);
         String sql = boundSql.getSql();
@@ -96,6 +100,9 @@ public class TopicQueryRepositoryImpl implements TopicQueryRepository {
         }
         List<String> predicates = new ArrayList<>();
         for (String field : inFields) {
+            if (!SEARCHABLE_FIELDS.contains(field)) {
+                continue;
+            }
             String column = FIELD_TO_COLUMN.get(field);
             if (column != null) {
                 predicates.add("lower(" + column + ") like lower(:query)");

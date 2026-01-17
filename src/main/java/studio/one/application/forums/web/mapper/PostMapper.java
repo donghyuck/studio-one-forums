@@ -25,6 +25,7 @@ public class PostMapper {
         response.setCreatedById(view.getCreatedById());
         response.setCreatedBy(view.getCreatedBy());
         response.setCreatedAt(view.getCreatedAt());
+        response.setVersion(view.getVersion());
         return response;
     }
 }

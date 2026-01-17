@@ -18,7 +18,7 @@ import javax.persistence.Version;
  * </pre>
  */
 @Entity
-@Table(name = "categories")
+@Table(name = "tb_application_categories")
 public class CategoryEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

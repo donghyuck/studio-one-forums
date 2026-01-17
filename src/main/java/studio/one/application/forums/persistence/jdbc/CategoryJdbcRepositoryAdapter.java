@@ -40,6 +40,9 @@ public class CategoryJdbcRepositoryAdapter implements CategoryRepository {
     @SqlStatement("forums.categorySelectByForum")
     private String categorySelectByForumSql;
 
+    @SqlStatement("forums.categoryDelete")
+    private String categoryDeleteSql;
+
     public CategoryJdbcRepositoryAdapter(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -71,6 +74,11 @@ public class CategoryJdbcRepositoryAdapter implements CategoryRepository {
         );
     }
 
+    @Override
+    public void deleteById(Long categoryId) {
+        jdbcTemplate.update(categoryDeleteSql, Map.of("id", categoryId));
+    }
+
     private Category insert(Category category) {
         MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("forumId", category.forumId())
@@ -87,8 +95,18 @@ public class CategoryJdbcRepositoryAdapter implements CategoryRepository {
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(categoryInsertSql, params, keyHolder);
-        Number key = keyHolder.getKey();
-        Long id = key != null ? key.longValue() : null;
+        Long id = null;
+        Map<String, Object> keys = keyHolder.getKeys();
+        if (keys != null) {
+            Object value = keys.get("id");
+            if (value instanceof Number) {
+                id = ((Number) value).longValue();
+            }
+        }
+        if (id == null) {
+            Number key = keyHolder.getKey();
+            id = key != null ? key.longValue() : null;
+        }
         return new Category(
             id,
             category.forumId(),

@@ -2,6 +2,7 @@ package studio.one.application.forums.persistence.jpa.repo;
 
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import studio.one.application.forums.persistence.jpa.entity.ForumEntity;
 
 /**
@@ -12,6 +13,6 @@ import studio.one.application.forums.persistence.jpa.entity.ForumEntity;
  * 2026-01-14  Son Donghyuck  최초 생성
  * </pre>
  */
-public interface ForumJpaRepository extends JpaRepository<ForumEntity, Long> {
+public interface ForumJpaRepository extends JpaRepository<ForumEntity, Long>, JpaSpecificationExecutor<ForumEntity> {
     Optional<ForumEntity> findBySlug(String slug);
 }

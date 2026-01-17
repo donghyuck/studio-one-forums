@@ -38,15 +38,19 @@ public class PostQueryRepositoryImpl implements PostQueryRepository {
     }
 
     @Override
-    public List<PostListRow> findPosts(Long topicId, Pageable pageable) {
+    public List<PostListRow> findPosts(Long topicId, Pageable pageable, boolean includeDeleted, boolean includeHidden) {
         String orderClause = buildOrderClause(pageable, "p.created_at asc");
         Map<String, Object> params = new HashMap<>();
         params.put("topicId", topicId);
         params.put("limit", pageable.getPageSize());
         params.put("offset", pageable.getOffset());
+        params.put("includeDeleted", includeDeleted);
+        params.put("includeHidden", includeHidden);
 
         Map<String, Object> dynamicParams = Map.of(
-            "orderClause", orderClause
+            "orderClause", orderClause,
+            "includeDeleted", includeDeleted,
+            "includeHidden", includeHidden
         );
         BoundSql boundSql = postListStatement.getBoundSql(params, dynamicParams);
         String sql = boundSql.getSql();
@@ -56,7 +60,8 @@ public class PostQueryRepositoryImpl implements PostQueryRepository {
             rs.getString("content"),
             rs.getLong("created_by_id"),
             rs.getString("created_by"),
-            rs.getObject("created_at", java.time.OffsetDateTime.class)
+            rs.getObject("created_at", java.time.OffsetDateTime.class),
+            rs.getLong("version")
         ));
     }
 

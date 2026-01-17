@@ -31,18 +31,22 @@ public class PostQueryService {
 
     @Cacheable(cacheResolver = "topicPostListCacheResolver",
                key = "new org.springframework.cache.interceptor.SimpleKey(#pageable)",
-               condition = "@forumsFeatureProperties.cache.enabled")
-    public List<PostSummaryView> listPosts(Long topicId, Pageable pageable) {
+               condition = "@environment.getProperty('studio.features.forums.cache.enabled','true') == 'true'")
+    public List<PostSummaryView> listPosts(Long topicId, Pageable pageable, boolean includeDeleted, boolean includeHidden) {
         Topic topic = topicRepository.findById(topicId)
             .orElseThrow(() -> TopicNotFoundException.byId(topicId));
-        return postQueryRepository.findPosts(topic.id(), pageable)
+        if (topic.deletedAt() != null) {
+            throw TopicNotFoundException.byId(topicId);
+        }
+        return postQueryRepository.findPosts(topic.id(), pageable, includeDeleted, includeHidden)
             .stream()
             .map(row -> new PostSummaryView(
                 row.getPostId(),
                 row.getContent(),
                 row.getCreatedById(),
                 row.getCreatedBy(),
-                row.getCreatedAt()
+                row.getCreatedAt(),
+                row.getVersion()
             ))
             .collect(Collectors.toList());
     }

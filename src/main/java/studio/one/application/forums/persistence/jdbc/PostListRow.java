@@ -17,13 +17,16 @@ public class PostListRow {
     private final Long createdById;
     private final String createdBy;
     private final OffsetDateTime createdAt;
+    private final long version;
 
-    public PostListRow(Long postId, String content, Long createdById, String createdBy, OffsetDateTime createdAt) {
+    public PostListRow(Long postId, String content, Long createdById, String createdBy, OffsetDateTime createdAt,
+                       long version) {
         this.postId = postId;
         this.content = content;
         this.createdById = createdById;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
+        this.version = version;
     }
 
     public Long getPostId() {
@@ -44,5 +47,9 @@ public class PostListRow {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public long getVersion() {
+        return version;
     }
 }

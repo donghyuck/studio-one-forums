@@ -18,7 +18,7 @@ import javax.persistence.Version;
  * </pre>
  */
 @Entity
-@Table(name = "topics")
+@Table(name = "tb_application_topics")
 public class TopicEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,6 +38,12 @@ public class TopicEntity {
 
     @Column(nullable = false)
     private String status;
+
+    @Column(nullable = false)
+    private boolean pinned;
+
+    @Column(nullable = false)
+    private boolean locked;
  
     @Column(nullable = false)
     private Long createdById;
@@ -57,6 +63,10 @@ public class TopicEntity {
     @Column(nullable = false)
     private OffsetDateTime updatedAt;
 
+    private OffsetDateTime deletedAt;
+
+    private Long deletedById;
+
     @Version
     private long version;
 
@@ -64,19 +74,25 @@ public class TopicEntity {
     }
 
     public TopicEntity(Long forumId, Long categoryId, String title, String tags, String status,
+                       boolean pinned, boolean locked,
                        Long createdById, String createdBy, OffsetDateTime createdAt,
-                       Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
+                       Long updatedById, String updatedBy, OffsetDateTime updatedAt,
+                       OffsetDateTime deletedAt, Long deletedById) {
         this.forumId = forumId;
         this.categoryId = categoryId;
         this.title = title;
         this.tags = tags;
         this.status = status;
+        this.pinned = pinned;
+        this.locked = locked;
         this.createdById = createdById;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
         this.updatedById = updatedById;
         this.updatedBy = updatedBy;
         this.updatedAt = updatedAt;
+        this.deletedAt = deletedAt;
+        this.deletedById = deletedById;
     }
 
     public Long getId() {
@@ -107,6 +123,14 @@ public class TopicEntity {
         return status;
     }
 
+    public boolean isPinned() {
+        return pinned;
+    }
+
+    public boolean isLocked() {
+        return locked;
+    }
+
     public Long getCreatedById() {
         return createdById;
     }
@@ -131,6 +155,14 @@ public class TopicEntity {
         return updatedAt;
     }
 
+    public OffsetDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public Long getDeletedById() {
+        return deletedById;
+    }
+
     public long getVersion() {
         return version;
     }
@@ -144,5 +176,24 @@ public class TopicEntity {
         this.updatedById = updatedById;
         this.updatedBy = updatedBy;
         this.updatedAt = updatedAt;
+    }
+
+    public void updatePinned(boolean pinned, Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
+        this.pinned = pinned;
+        this.updatedById = updatedById;
+        this.updatedBy = updatedBy;
+        this.updatedAt = updatedAt;
+    }
+
+    public void updateLocked(boolean locked, Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
+        this.locked = locked;
+        this.updatedById = updatedById;
+        this.updatedBy = updatedBy;
+        this.updatedAt = updatedAt;
+    }
+
+    public void softDelete(Long deletedById, OffsetDateTime deletedAt) {
+        this.deletedById = deletedById;
+        this.deletedAt = deletedAt;
     }
 }

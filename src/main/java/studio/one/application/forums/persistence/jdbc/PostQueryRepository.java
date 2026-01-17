@@ -12,5 +12,5 @@ import org.springframework.data.domain.Pageable;
  * </pre>
  */
 public interface PostQueryRepository {
-    List<PostListRow> findPosts(Long topicId, Pageable pageable);
+    List<PostListRow> findPosts(Long topicId, Pageable pageable, boolean includeDeleted, boolean includeHidden);
 }

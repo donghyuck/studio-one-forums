@@ -44,6 +44,11 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
             .collect(Collectors.toList());
     }
 
+    @Override
+    public void deleteById(Long categoryId) {
+        categoryJpaRepository.deleteById(categoryId);
+    }
+
     private CategoryEntity toEntity(Category category) {
         return new CategoryEntity(
             category.forumId(),

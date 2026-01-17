@@ -4,6 +4,7 @@ import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,7 +34,7 @@ public class CategoryAdminController {
     }
 
     @PostMapping
-    @PreAuthorize("@forumsAuthz.canCreateCategory(#forumSlug)")
+    @PreAuthorize("@forumAuthz.canBoard(#forumSlug, 'MODERATE')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createCategory(
         @PathVariable String forumSlug,
         @RequestBody CategoryDtos.CreateCategoryRequest request,
@@ -46,6 +47,19 @@ public class CategoryAdminController {
             categoryMapper.toCreateCommand(forumSlug, request, createdById, createdBy)
         ).id();
         return ResponseEntity.ok(ApiResponse.ok(Map.of("categoryId", categoryId)));
+    }
+
+    @DeleteMapping("/{categoryId}")
+    @PreAuthorize("@forumAuthz.canCategory(#categoryId, 'MODERATE')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteCategory(
+        @PathVariable String forumSlug,
+        @PathVariable Long categoryId
+    ) {
+        categoryCommandService.deleteCategory(forumSlug, categoryId);
+        return ResponseEntity.ok(ApiResponse.ok(Map.of(
+            "categoryId", categoryId,
+            "deleted", true
+        )));
     }
 
     private Long requireUserId(Long userId) {

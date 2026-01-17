@@ -30,29 +30,35 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import lombok.extern.slf4j.Slf4j;
 import studio.one.application.forums.autoconfigure.condition.ConditionalOnForumsPersistence;
 import studio.one.application.forums.persistence.jdbc.CategoryJdbcRepositoryAdapter;
+import studio.one.application.forums.persistence.jdbc.ForumMemberJdbcRepositoryAdapter;
+import studio.one.application.forums.persistence.jdbc.ForumAclRuleJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.ForumJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.PostJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.PostQueryRepositoryImpl;
 import studio.one.application.forums.persistence.jdbc.TopicJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.TopicQueryRepositoryImpl;
 import studio.one.application.forums.persistence.jpa.CategoryRepositoryAdapter;
+import studio.one.application.forums.persistence.jpa.ForumMemberRepositoryAdapter;
+import studio.one.application.forums.persistence.jpa.ForumAclRuleRepositoryAdapter;
 import studio.one.application.forums.persistence.jpa.ForumRepositoryAdapter;
 import studio.one.application.forums.persistence.jpa.PostRepositoryAdapter;
 import studio.one.application.forums.persistence.jpa.TopicRepositoryAdapter;
 import studio.one.application.forums.persistence.jpa.entity.ForumEntity;
 import studio.one.application.forums.persistence.jpa.repo.CategoryJpaRepository;
+import studio.one.application.forums.persistence.jpa.repo.ForumMemberJpaRepository;
+import studio.one.application.forums.persistence.jpa.repo.ForumAclRuleJpaRepository;
 import studio.one.application.forums.persistence.jpa.repo.ForumJpaRepository;
 import studio.one.application.forums.persistence.jpa.repo.PostJpaRepository;
 import studio.one.application.forums.persistence.jpa.repo.TopicJpaRepository;
 import studio.one.application.forums.web.controller.CategoryAdminController;
 import studio.one.application.forums.web.controller.CategoryController;
-import studio.one.application.forums.web.controller.ForumAclAdminController;
 import studio.one.application.forums.web.controller.ForumAdminController;
 import studio.one.application.forums.web.controller.ForumController;
 import studio.one.application.forums.web.controller.PostAdminController;
 import studio.one.application.forums.web.controller.PostController;
 import studio.one.application.forums.web.controller.TopicAdminController;
 import studio.one.application.forums.web.controller.TopicController;
+import studio.one.application.forums.web.controller.ForumMemberAdminController;
 import studio.one.application.forums.domain.event.listener.ForumsCacheEvictListener;
 import studio.one.platform.autoconfigure.EntityScanRegistrarSupport;
 import studio.one.platform.autoconfigure.I18nKeys;
@@ -106,7 +112,7 @@ public class ForumsAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnBean(EntityManagerFactory.class)
     @ConditionalOnForumsPersistence(PersistenceProperties.Type.jpa)
-    @EnableJpaRepositories(basePackageClasses = { ForumJpaRepository.class })
+    @EnableJpaRepositories(basePackageClasses = { ForumJpaRepository.class, ForumMemberJpaRepository.class })
     static class JpaWiring {
     }
 
@@ -135,6 +141,18 @@ public class ForumsAutoConfiguration {
         @ConditionalOnMissingBean(PostRepositoryAdapter.class)
         PostRepositoryAdapter postRepositoryAdapter(PostJpaRepository repo) {
             return new PostRepositoryAdapter(repo);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(ForumAclRuleRepositoryAdapter.class)
+        ForumAclRuleRepositoryAdapter forumAclRuleRepositoryAdapter(ForumAclRuleJpaRepository repo) {
+            return new ForumAclRuleRepositoryAdapter(repo);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(ForumMemberRepositoryAdapter.class)
+        ForumMemberRepositoryAdapter forumMemberRepositoryAdapter(ForumMemberJpaRepository repo) {
+            return new ForumMemberRepositoryAdapter(repo);
         }
     }
 
@@ -167,6 +185,20 @@ public class ForumsAutoConfiguration {
         PostJdbcRepositoryAdapter postJdbcRepositoryAdapter(
             @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
             return new PostJdbcRepositoryAdapter(template);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(ForumAclRuleJdbcRepositoryAdapter.class)
+        ForumAclRuleJdbcRepositoryAdapter forumAclRuleJdbcRepositoryAdapter(
+            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
+            return new ForumAclRuleJdbcRepositoryAdapter(template);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(ForumMemberJdbcRepositoryAdapter.class)
+        ForumMemberJdbcRepositoryAdapter forumMemberJdbcRepositoryAdapter(
+            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
+            return new ForumMemberJdbcRepositoryAdapter(template);
         }
     }
 
@@ -204,8 +236,8 @@ public class ForumsAutoConfiguration {
         CategoryController.class,
         TopicController.class,
         PostController.class,
-        ForumAclAdminController.class,
         ForumAdminController.class,
+        ForumMemberAdminController.class,
         CategoryAdminController.class,
         TopicAdminController.class,
         PostAdminController.class

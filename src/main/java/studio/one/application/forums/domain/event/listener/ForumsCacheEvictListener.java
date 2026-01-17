@@ -9,6 +9,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import lombok.RequiredArgsConstructor;
 import studio.one.application.forums.constant.CacheNames;
 import studio.one.application.forums.domain.event.CategoryCreatedEvent;
+import studio.one.application.forums.domain.event.CategoryDeletedEvent;
 import studio.one.application.forums.domain.event.ForumCreatedEvent;
 import studio.one.application.forums.domain.event.ForumUpdatedEvent;
 import studio.one.application.forums.domain.event.ForumsCacheEvictableEvent;
@@ -41,6 +42,10 @@ public class ForumsCacheEvictListener {
             return;
         }
         if (event instanceof CategoryCreatedEvent) {
+            evictCategoriesByForum(event.forumSlug());
+            return;
+        }
+        if (event instanceof CategoryDeletedEvent) {
             evictCategoriesByForum(event.forumSlug());
             return;
         }

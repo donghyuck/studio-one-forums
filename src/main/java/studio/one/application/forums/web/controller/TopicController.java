@@ -37,15 +37,17 @@ public class TopicController {
     }
 
     @GetMapping("/topics")
-    @PreAuthorize("@forumsAuthz.canListTopics(#forumSlug)")
+    @PreAuthorize("@forumAuthz.canBoard(#forumSlug, 'READ_TOPIC_LIST') and (!#includeDeleted || @forumAuthz.canBoard(#forumSlug, 'MODERATE'))")
     public ResponseEntity<ApiResponse<List<TopicDtos.TopicSummaryResponse>>> listTopics(@PathVariable String forumSlug,
                                                                                         @RequestParam(required = false) String q,
                                                                                         @RequestParam(required = false, name = "in") String inFields,
                                                                                         @RequestParam(required = false) String fields,
+                                                                                        @RequestParam(required = false, defaultValue = "false") boolean includeDeleted,
+                                                                                        @RequestParam(required = false, defaultValue = "default") String select,
                                                                                         Pageable pageable) {
         Set<String> inSet = parseCsvSet(inFields);
         Set<String> fieldSet = parseCsvSet(fields);
-        List<TopicDtos.TopicSummaryResponse> responses = topicQueryService.listTopics(forumSlug, q, inSet, fieldSet, pageable)
+        List<TopicDtos.TopicSummaryResponse> responses = topicQueryService.listTopics(forumSlug, q, inSet, fieldSet, pageable, includeDeleted)
             .stream()
             .map(topicMapper::toSummaryResponse)
             .collect(Collectors.toList());
@@ -53,8 +55,10 @@ public class TopicController {
     }
 
     @GetMapping("/topics/{topicId}")
-    @PreAuthorize("@forumsAuthz.canReadTopic(#forumSlug, #topicId)")
-    public ResponseEntity<ApiResponse<TopicDtos.TopicResponse>> getTopic(@PathVariable String forumSlug, @PathVariable Long topicId) {
+    @PreAuthorize("@forumAuthz.canTopic(#topicId, 'READ_TOPIC_CONTENT')")
+    public ResponseEntity<ApiResponse<TopicDtos.TopicResponse>> getTopic(@PathVariable String forumSlug,
+                                                                         @PathVariable Long topicId,
+                                                                         @RequestParam(required = false) String include) {
         TopicDetailView view = topicQueryService.getTopic(forumSlug, topicId);
         return ResponseEntity.ok()
             .eTag(buildEtag(view.getVersion()))

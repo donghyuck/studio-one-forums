@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -13,6 +14,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import studio.one.application.forums.domain.model.Post;
 import studio.one.application.forums.domain.repository.PostRepository;
+import studio.one.application.forums.domain.exception.PostVersionMismatchException;
 import studio.one.platform.data.sqlquery.annotation.SqlStatement;
 
 /**
@@ -36,6 +38,9 @@ public class PostJdbcRepositoryAdapter implements PostRepository {
     @SqlStatement("forums.postSelectByTopic")
     private String postSelectByTopicSql;
 
+    @SqlStatement("forums.postSelectById")
+    private String postSelectByIdSql;
+
     public PostJdbcRepositoryAdapter(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -57,6 +62,16 @@ public class PostJdbcRepositoryAdapter implements PostRepository {
         );
     }
 
+    @Override
+    public Optional<Post> findById(Long postId) {
+        List<Post> rows = jdbcTemplate.query(
+            postSelectByIdSql,
+            Map.of("postId", postId),
+            postRowMapper
+        );
+        return rows.stream().findFirst();
+    }
+
     private Post insert(Post post) {
         MapSqlParameterSource params = new MapSqlParameterSource()
             .addValue("topicId", post.topicId())
@@ -67,6 +82,10 @@ public class PostJdbcRepositoryAdapter implements PostRepository {
             .addValue("updatedById", post.updatedById())
             .addValue("updatedBy", post.updatedBy())
             .addValue("updatedAt", post.updatedAt())
+            .addValue("deletedAt", post.deletedAt())
+            .addValue("deletedById", post.deletedById())
+            .addValue("hiddenAt", post.hiddenAt())
+            .addValue("hiddenById", post.hiddenById())
             .addValue("version", 0L);
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -82,20 +101,47 @@ public class PostJdbcRepositoryAdapter implements PostRepository {
             post.createdAt(),
             post.updatedById(),
             post.updatedBy(),
-            post.updatedAt()
+            post.updatedAt(),
+            post.deletedAt(),
+            post.deletedById(),
+            post.hiddenAt(),
+            post.hiddenById(),
+            0L
         );
     }
 
     private Post update(Post post) {
-        Map<String, Object> params = Map.of(
-            "id", post.id(),
-            "content", post.content(),
-            "updatedById", post.updatedById(),
-            "updatedBy", post.updatedBy(),
-            "updatedAt", post.updatedAt()
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", post.id())
+            .addValue("content", post.content())
+            .addValue("updatedById", post.updatedById())
+            .addValue("updatedBy", post.updatedBy())
+            .addValue("updatedAt", post.updatedAt())
+            .addValue("deletedAt", post.deletedAt())
+            .addValue("deletedById", post.deletedById())
+            .addValue("hiddenAt", post.hiddenAt())
+            .addValue("hiddenById", post.hiddenById())
+            .addValue("version", post.version());
+        int updated = jdbcTemplate.update(postUpdateSql, params);
+        if (updated == 0) {
+            throw PostVersionMismatchException.byId(post.id());
+        }
+        return new Post(
+            post.id(),
+            post.topicId(),
+            post.content(),
+            post.createdById(),
+            post.createdBy(),
+            post.createdAt(),
+            post.updatedById(),
+            post.updatedBy(),
+            post.updatedAt(),
+            post.deletedAt(),
+            post.deletedById(),
+            post.hiddenAt(),
+            post.hiddenById(),
+            post.version() + 1
         );
-        jdbcTemplate.update(postUpdateSql, params);
-        return post;
     }
 
     private final RowMapper<Post> postRowMapper = new RowMapper<>() {
@@ -110,7 +156,12 @@ public class PostJdbcRepositoryAdapter implements PostRepository {
                 rs.getObject("created_at", OffsetDateTime.class),
                 rs.getLong("updated_by_id"),
                 rs.getString("updated_by"),
-                rs.getObject("updated_at", OffsetDateTime.class)
+                rs.getObject("updated_at", OffsetDateTime.class),
+                rs.getObject("deleted_at", OffsetDateTime.class),
+                rs.getObject("deleted_by_id") != null ? rs.getLong("deleted_by_id") : null,
+                rs.getObject("hidden_at", OffsetDateTime.class),
+                rs.getObject("hidden_by_id") != null ? rs.getLong("hidden_by_id") : null,
+                rs.getLong("version")
             );
         }
     };

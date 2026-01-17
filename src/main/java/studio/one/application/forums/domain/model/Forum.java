@@ -1,10 +1,12 @@
 package studio.one.application.forums.domain.model;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import studio.one.application.forums.domain.vo.ForumSlug;
+import studio.one.application.forums.domain.type.ForumType;
 
 /**
  * Forums 도메인 모델.
@@ -22,6 +24,8 @@ public class Forum {
     private final ForumSlug slug;
     private String name;
     private String description;
+    private ForumType type;
+    private Map<String, String> properties;
     private Long createdById;
     private String createdBy;
     private OffsetDateTime createdAt;

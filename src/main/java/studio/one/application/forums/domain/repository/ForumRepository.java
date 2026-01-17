@@ -1,6 +1,9 @@
 package studio.one.application.forums.domain.repository;
 
 import java.util.Optional;
+import java.util.Set;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import studio.one.application.forums.domain.model.Forum;
 import studio.one.application.forums.domain.vo.ForumSlug;
 
@@ -22,4 +25,9 @@ public interface ForumRepository {
     boolean existsBySlug(ForumSlug slug);
 
     java.util.List<Forum> findAll();
+
+    Page<Forum> search(String query, Set<String> inFields, Pageable pageable);
+
+    java.util.List<Forum> searchCandidates(String query, Set<String> inFields, boolean isAdmin,
+                                           boolean isMember, boolean secretListVisible, Long userId);
 }

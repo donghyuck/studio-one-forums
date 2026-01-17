@@ -1,8 +1,11 @@
 package studio.one.application.forums.service.forum;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import studio.one.application.forums.constant.CacheNames;
 import studio.one.application.forums.domain.exception.ForumNotFoundException;
@@ -30,7 +33,7 @@ public class ForumQueryService {
 
     @Cacheable(cacheNames = CacheNames.Forum.BY_SLUG,
                key = "#slug",
-               condition = "@forumsFeatureProperties.cache.enabled",
+               condition = "@environment.getProperty('studio.features.forums.cache.enabled','true') == 'true'",
                unless = "#result == null")
     public ForumDetailView getForum(String slug) {
         Forum forum = forumRepository.findBySlug(ForumSlug.of(slug))
@@ -46,11 +49,25 @@ public class ForumQueryService {
     }
 
     @Cacheable(cacheNames = CacheNames.Forum.LIST,
-               condition = "@forumsFeatureProperties.cache.enabled")
-    public List<ForumSummaryView> listForums() {
-        return forumRepository.findAll()
-            .stream()
-            .map(forum -> new ForumSummaryView(forum.slug().value(), forum.name(), forum.updatedAt()))
-            .collect(Collectors.toList());
+               key = "new org.springframework.cache.interceptor.SimpleKey(#query, #inFields, #pageable)",
+               condition = "@environment.getProperty('studio.features.forums.cache.enabled','true') == 'true'")
+    public Page<ForumSummaryView> listForums(String query, Set<String> inFields, Pageable pageable) {
+        Page<Forum> page = forumRepository.search(query, normalizeInFields(inFields), pageable);
+        return page.map(forum -> new ForumSummaryView(forum.slug().value(), forum.name(), forum.updatedAt()));
+    }
+
+    public List<Forum> listForumCandidates(String query, Set<String> inFields, boolean isAdmin,
+                                           boolean isMember, boolean secretListVisible, Long userId) {
+        return forumRepository.searchCandidates(query, normalizeInFields(inFields),
+            isAdmin, isMember, secretListVisible, userId);
+    }
+
+    private Set<String> normalizeInFields(Set<String> inFields) {
+        if (inFields == null || inFields.isEmpty()) {
+            return Set.of("slug", "name", "description");
+        }
+        return inFields.stream()
+            .filter(field -> field.equals("slug") || field.equals("name") || field.equals("description"))
+            .collect(Collectors.toUnmodifiableSet());
     }
 }

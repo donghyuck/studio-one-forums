@@ -1,6 +1,7 @@
 package studio.one.application.forums.service.forum;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,7 +12,9 @@ import studio.one.application.forums.domain.exception.ForumSlugConflictException
 import studio.one.application.forums.domain.exception.ForumVersionMismatchException;
 import studio.one.application.forums.domain.model.Forum;
 import studio.one.application.forums.domain.repository.ForumRepository;
+import studio.one.application.forums.domain.type.ForumType;
 import studio.one.application.forums.domain.vo.ForumSlug;
+import studio.one.application.forums.service.member.ForumMemberService;
 import studio.one.application.forums.service.forum.command.CreateForumCommand;
 import studio.one.application.forums.service.forum.command.UpdateForumSettingsCommand;
 
@@ -27,10 +30,14 @@ import studio.one.application.forums.service.forum.command.UpdateForumSettingsCo
 public class ForumCommandService {
     private final ForumRepository forumRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final ForumMemberService forumMemberService;
 
-    public ForumCommandService(ForumRepository forumRepository, ApplicationEventPublisher eventPublisher) {
+    public ForumCommandService(ForumRepository forumRepository,
+                               ApplicationEventPublisher eventPublisher,
+                               ForumMemberService forumMemberService) {
         this.forumRepository = forumRepository;
         this.eventPublisher = eventPublisher;
+        this.forumMemberService = forumMemberService;
     }
 
     @Transactional
@@ -45,6 +52,8 @@ public class ForumCommandService {
             slug,
             command.name(),
             command.description(),
+            ForumType.COMMON,
+            Map.of(),
             command.createdById(),
             command.createdBy(),
             now,
@@ -54,6 +63,7 @@ public class ForumCommandService {
             0L
         );
         Forum saved = forumRepository.save(forum);
+        forumMemberService.addOrUpdateMemberRole(saved.id(), command.createdById(), studio.one.application.forums.domain.type.ForumMemberRole.OWNER, command.createdById());
         eventPublisher.publishEvent(new ForumCreatedEvent(saved.slug().value(), null, now));
         return saved;
     }
