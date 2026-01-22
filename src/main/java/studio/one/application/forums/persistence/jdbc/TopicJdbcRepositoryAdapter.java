@@ -85,8 +85,18 @@ public class TopicJdbcRepositoryAdapter implements TopicRepository {
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(topicInsertSql, params, keyHolder);
-        Number key = keyHolder.getKey();
-        Long id = key != null ? key.longValue() : null;
+        Long id = null;
+        Map<String, Object> keys = keyHolder.getKeys();
+        if (keys != null) {
+            Object value = keys.get("id");
+            if (value instanceof Number) {
+                id = ((Number) value).longValue();
+            }
+        }
+        if (id == null) {
+            Number key = keyHolder.getKey();
+            id = key != null ? key.longValue() : null;
+        }
         return new Topic(
             id,
             topic.forumId(),
@@ -150,10 +160,11 @@ public class TopicJdbcRepositoryAdapter implements TopicRepository {
     private final RowMapper<Topic> topicRowMapper = new RowMapper<>() {
         @Override
         public Topic mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Long categoryId = rs.getObject("category_id") != null ? rs.getLong("category_id") : null;
             return new Topic(
                 rs.getLong("id"),
                 rs.getLong("forum_id"),
-                rs.getLong("category_id"),
+                categoryId,
                 rs.getString("title"),
                 splitTags(rs.getString("tags")),
                 TopicStatus.valueOf(rs.getString("status")),

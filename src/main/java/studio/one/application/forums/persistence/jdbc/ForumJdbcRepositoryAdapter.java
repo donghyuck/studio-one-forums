@@ -25,9 +25,6 @@ import studio.one.application.forums.domain.model.Forum;
 import studio.one.application.forums.domain.repository.ForumRepository;
 import studio.one.application.forums.domain.type.ForumType;
 import studio.one.application.forums.domain.vo.ForumSlug;
-import studio.one.platform.data.sqlquery.mapping.BoundSql;
-import studio.one.platform.data.sqlquery.mapping.MappedStatement;
-import studio.one.platform.data.sqlquery.annotation.SqlMappedStatement;
 import studio.one.platform.data.sqlquery.annotation.SqlStatement;
 
 /**
@@ -68,15 +65,6 @@ public class ForumJdbcRepositoryAdapter implements ForumRepository {
 
     @SqlStatement("forums.forumPropertyInsert")
     private String forumPropertyInsertSql;
-
-    @SqlMappedStatement("forums.forumList")
-    private MappedStatement forumListStatement;
-
-    @SqlMappedStatement("forums.forumListVisible")
-    private MappedStatement forumListVisibleStatement;
-
-    @SqlMappedStatement("forums.forumCount")
-    private MappedStatement forumCountStatement;
 
     public ForumJdbcRepositoryAdapter(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -131,23 +119,31 @@ public class ForumJdbcRepositoryAdapter implements ForumRepository {
         String searchClause = buildSearchClause(query, fields);
         String orderClause = buildOrderClause(pageable, "f.updated_at desc, f.id desc");
         Map<String, Object> params = new java.util.HashMap<>();
+        params.put("searchClause", searchClause);
+        params.put("orderClause", orderClause);
         if (!searchClause.isBlank()) {
             params.put("query", "%" + query + "%");
         }
         params.put("limit", pageable.getPageSize());
         params.put("offset", pageable.getOffset());
 
-        BoundSql countSql = forumCountStatement.getBoundSql(params, Map.of("searchClause", searchClause));
-        Long total = jdbcTemplate.queryForObject(countSql.getSql(), params, Long.class);
+        String countSql = "select count(1)"
+            + " from tb_application_forums f"
+            + " where 1 = 1"
+            + searchClause;
+        Long total = jdbcTemplate.queryForObject(countSql, params, Long.class);
         if (total == null || total == 0L) {
             return new PageImpl<>(List.of(), pageable, 0);
         }
 
-        BoundSql listSql = forumListStatement.getBoundSql(params, Map.of(
-            "searchClause", searchClause,
-            "orderClause", orderClause
-        ));
-        List<Forum> rows = jdbcTemplate.query(listSql.getSql(), params, forumRowMapper);
+        String listSql = "select id, slug, name, description, type, created_by_id, created_by, created_at,"
+            + " updated_by_id, updated_by, updated_at, version"
+            + " from tb_application_forums f"
+            + " where 1 = 1"
+            + searchClause
+            + orderClause
+            + " limit :limit offset :offset";
+        List<Forum> rows = jdbcTemplate.query(listSql, params, forumRowMapper);
         return new PageImpl<>(rows, pageable, total);
     }
 
@@ -159,17 +155,62 @@ public class ForumJdbcRepositoryAdapter implements ForumRepository {
         String orderClause = buildOrderClause(Pageable.unpaged(), "f.updated_at desc, f.id desc");
         String visibilityClause = buildVisibilityClause(isAdmin, isMember, secretListVisible, userId);
         Map<String, Object> params = new java.util.HashMap<>();
+        params.put("searchClause", searchClause);
+        params.put("orderClause", orderClause);
+        params.put("visibilityClause", visibilityClause);
         if (!searchClause.isBlank()) {
             params.put("query", "%" + query + "%");
         }
         params.put("userId", userId);
 
-        BoundSql listSql = forumListVisibleStatement.getBoundSql(params, Map.of(
-            "searchClause", searchClause,
-            "orderClause", orderClause,
-            "visibilityClause", visibilityClause
-        ));
-        return jdbcTemplate.query(listSql.getSql(), params, forumRowMapper);
+        String listSql = "select id, slug, name, description, type, created_by_id, created_by, created_at,"
+            + " updated_by_id, updated_by, updated_at, version"
+            + " from tb_application_forums f"
+            + " where 1 = 1"
+            + searchClause
+            + visibilityClause
+            + orderClause;
+        return jdbcTemplate.query(listSql, params, forumRowMapper);
+    }
+
+    @Override
+    public Page<Forum> searchCandidatesPage(String query, Set<String> inFields, boolean isAdmin,
+                                            boolean isMember, boolean secretListVisible, Long userId, Pageable pageable) {
+        Set<String> fields = normalizeInFields(inFields);
+        String searchClause = buildSearchClause(query, fields);
+        String orderClause = buildOrderClause(pageable, "f.updated_at desc, f.id desc");
+        String visibilityClause = buildVisibilityClause(isAdmin, isMember, secretListVisible, userId);
+        Map<String, Object> params = new java.util.HashMap<>();
+        params.put("searchClause", searchClause);
+        params.put("orderClause", orderClause);
+        params.put("visibilityClause", visibilityClause);
+        if (!searchClause.isBlank()) {
+            params.put("query", "%" + query + "%");
+        }
+        params.put("userId", userId);
+        params.put("limit", pageable.getPageSize());
+        params.put("offset", pageable.getOffset());
+
+        String countSql = "select count(1)"
+            + " from tb_application_forums f"
+            + " where 1 = 1"
+            + searchClause
+            + visibilityClause;
+        Long total = jdbcTemplate.queryForObject(countSql, params, Long.class);
+        if (total == null || total == 0L) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+
+        String listSql = "select id, slug, name, description, type, created_by_id, created_by, created_at,"
+            + " updated_by_id, updated_by, updated_at, version"
+            + " from tb_application_forums f"
+            + " where 1 = 1"
+            + searchClause
+            + visibilityClause
+            + orderClause
+            + " limit :limit offset :offset";
+        List<Forum> rows = jdbcTemplate.query(listSql, params, forumRowMapper);
+        return new PageImpl<>(rows, pageable, total);
     }
 
     private Forum insert(Forum forum) {

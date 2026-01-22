@@ -27,6 +27,7 @@ import studio.one.application.forums.service.topic.command.CreateTopicCommand;
 import studio.one.application.forums.service.topic.command.DeleteTopicCommand;
 import studio.one.application.forums.service.topic.command.LockTopicCommand;
 import studio.one.application.forums.service.topic.command.PinTopicCommand;
+import studio.one.application.forums.service.topic.command.UpdateTopicCommand;
 
 /**
  * Forums 명령 서비스.
@@ -63,16 +64,20 @@ public class TopicCommandService {
     public Topic createTopic(CreateTopicCommand command) {
         Forum forum = forumRepository.findBySlug(ForumSlug.of(command.forumSlug()))
             .orElseThrow(() -> ForumNotFoundException.bySlug(command.forumSlug()));
-        Category category = categoryRepository.findById(command.categoryId())
-            .orElseThrow(() -> CategoryNotFoundException.byId(command.categoryId()));
-        if (!category.forumId().equals(forum.id())) {
-            throw CategoryForumMismatchException.of(category.id(), forum.id());
+        Long categoryId = null;
+        if (command.categoryId() != null) {
+            Category category = categoryRepository.findById(command.categoryId())
+                .orElseThrow(() -> CategoryNotFoundException.byId(command.categoryId()));
+            if (!category.forumId().equals(forum.id())) {
+                throw CategoryForumMismatchException.of(category.id(), forum.id());
+            }
+            categoryId = category.id();
         }
         OffsetDateTime now = OffsetDateTime.now();
         Topic topic = new Topic(
             null,
             forum.id(),
-            category.id(),
+            categoryId,
             command.title(),
             command.tags(),
             TopicStatus.OPEN,
@@ -111,6 +116,21 @@ public class TopicCommandService {
         Topic saved = topicRepository.save(topic);
         eventPublisher.publishEvent(new TopicStatusChangedEvent(command.forumSlug(), saved.id(), now));
         return saved;
+    }
+
+    @Transactional
+    public Topic updateTopic(UpdateTopicCommand command) {
+        Topic topic = topicRepository.findById(command.topicId())
+            .orElseThrow(() -> TopicNotFoundException.byId(command.topicId()));
+        if (topic.deletedAt() != null) {
+            throw TopicNotFoundException.byId(command.topicId());
+        }
+        if (topic.version() != command.expectedVersion()) {
+            throw TopicVersionMismatchException.byId(command.topicId());
+        }
+        OffsetDateTime now = OffsetDateTime.now();
+        topic.updateContent(command.title(), command.tags(), command.updatedById(), command.updatedBy(), now);
+        return topicRepository.save(topic);
     }
 
     @Transactional

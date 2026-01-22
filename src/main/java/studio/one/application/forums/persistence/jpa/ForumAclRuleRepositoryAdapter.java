@@ -21,7 +21,7 @@ public class ForumAclRuleRepositoryAdapter implements ForumAclRuleRepository {
     }
 
     @Override
-    public List<ForumAclRule> findRules(long boardId, Long categoryId, PermissionAction action,
+    public List<ForumAclRule> findRules(long forumId, Long categoryId, PermissionAction action,
                                         Set<String> roleNames, Set<Long> roleIds, Long userId, String username) {
         boolean hasRoleNames = roleNames != null && !roleNames.isEmpty();
         boolean hasRoleIds = roleIds != null && !roleIds.isEmpty();
@@ -32,8 +32,27 @@ public class ForumAclRuleRepositoryAdapter implements ForumAclRuleRepository {
         }
         Set<String> roleNamesSafe = hasRoleNames ? roleNames : Set.of("__none__");
         Set<Long> roleIdsSafe = hasRoleIds ? roleIds : Set.of(-1L);
-        return forumAclRuleJpaRepository.findRules(boardId, categoryId, action, roleNamesSafe, roleIdsSafe, userId,
+        return forumAclRuleJpaRepository.findRules(forumId, categoryId, action, roleNamesSafe, roleIdsSafe, userId,
                 username, hasRoleNames, hasRoleIds, hasUserId, hasUsername)
+            .stream()
+            .map(this::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ForumAclRule> findRulesBulk(Set<Long> forumIds, Long categoryId, PermissionAction action,
+                                            Set<String> roleNames, Set<Long> roleIds, Long userId, String username) {
+        boolean hasRoleNames = roleNames != null && !roleNames.isEmpty();
+        boolean hasRoleIds = roleIds != null && !roleIds.isEmpty();
+        boolean hasUserId = userId != null;
+        boolean hasUsername = username != null && !username.isBlank();
+        if (forumIds == null || forumIds.isEmpty() || (!hasRoleNames && !hasRoleIds && !hasUserId && !hasUsername)) {
+            return List.of();
+        }
+        Set<String> roleNamesSafe = hasRoleNames ? roleNames : Set.of("__none__");
+        Set<Long> roleIdsSafe = hasRoleIds ? roleIds : Set.of(-1L);
+        return forumAclRuleJpaRepository.findRulesBulk(forumIds, categoryId, action, roleNamesSafe, roleIdsSafe,
+                userId, username, hasRoleNames, hasRoleIds, hasUserId, hasUsername)
             .stream()
             .map(this::toDomain)
             .collect(Collectors.toList());
@@ -48,7 +67,7 @@ public class ForumAclRuleRepositoryAdapter implements ForumAclRuleRepository {
         }
         return new ForumAclRule(
             entity.getRuleId(),
-            entity.getBoardId(),
+            entity.getForumId(),
             entity.getCategoryId(),
             subjectType,
             identifierType,

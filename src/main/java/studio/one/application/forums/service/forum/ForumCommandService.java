@@ -11,8 +11,11 @@ import studio.one.application.forums.domain.exception.ForumNotFoundException;
 import studio.one.application.forums.domain.exception.ForumSlugConflictException;
 import studio.one.application.forums.domain.exception.ForumVersionMismatchException;
 import studio.one.application.forums.domain.model.Forum;
+import studio.one.application.forums.domain.property.ForumPropertyKeys;
+import studio.one.application.forums.domain.property.ForumProperties;
 import studio.one.application.forums.domain.repository.ForumRepository;
 import studio.one.application.forums.domain.type.ForumType;
+import studio.one.application.forums.domain.type.ForumViewType;
 import studio.one.application.forums.domain.vo.ForumSlug;
 import studio.one.application.forums.service.member.ForumMemberService;
 import studio.one.application.forums.service.forum.command.CreateForumCommand;
@@ -47,13 +50,18 @@ public class ForumCommandService {
             throw ForumSlugConflictException.bySlug(slug.value());
         }
         OffsetDateTime now = OffsetDateTime.now();
+        ForumProperties.validateKnownKeys(command.properties());
+        ForumViewType viewType = (command.viewType() == null || command.viewType().isBlank())
+            ? null
+            : ForumViewType.from(command.viewType());
+        Map<String, String> properties = ForumProperties.normalizeForWrite(command.properties(), viewType);
         Forum forum = new Forum(
             null,
             slug,
             command.name(),
             command.description(),
             ForumType.COMMON,
-            Map.of(),
+            properties,
             command.createdById(),
             command.createdBy(),
             now,
@@ -76,10 +84,39 @@ public class ForumCommandService {
         if (forum.version() != command.expectedVersion()) {
             throw ForumVersionMismatchException.bySlug(slug.value());
         }
+        Map<String, String> properties = resolveProperties(forum, command);
         OffsetDateTime now = OffsetDateTime.now();
-        forum.updateSettings(command.name(), command.description(), command.updatedById(), command.updatedBy(), now);
+        forum.updateSettings(
+            command.name(),
+            command.description(),
+            properties,
+            command.updatedById(),
+            command.updatedBy(),
+            now
+        );
         Forum saved = forumRepository.save(forum);
         eventPublisher.publishEvent(new ForumUpdatedEvent(saved.slug().value(), null, now));
         return saved;
+    }
+
+    private Map<String, String> resolveProperties(Forum forum, UpdateForumSettingsCommand command) {
+        boolean hasProperties = command.properties() != null;
+        boolean hasViewType = command.viewType() != null && !command.viewType().isBlank();
+        if (!hasProperties && !hasViewType) {
+            return null;
+        }
+        if (hasProperties) {
+            ForumProperties.validateKnownKeys(command.properties());
+        }
+        Map<String, String> base = hasProperties ? new java.util.LinkedHashMap<>(command.properties()) : forum.properties();
+        ForumViewType viewType;
+        if (hasViewType) {
+            viewType = ForumViewType.from(command.viewType());
+        } else if (hasProperties && command.properties().containsKey(ForumPropertyKeys.VIEW_TYPE)) {
+            viewType = ForumViewType.from(command.properties().get(ForumPropertyKeys.VIEW_TYPE));
+        } else {
+            viewType = ForumProperties.readViewType(forum.properties());
+        }
+        return ForumProperties.normalizeForWrite(base, viewType);
     }
 }

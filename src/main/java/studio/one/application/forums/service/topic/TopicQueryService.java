@@ -1,9 +1,10 @@
 package studio.one.application.forums.service.topic;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import studio.one.application.forums.constant.CacheNames;
@@ -68,15 +69,40 @@ public class TopicQueryService {
     }
 
     @Cacheable(cacheResolver = "forumTopicListCacheResolver",
-               key = "new org.springframework.cache.interceptor.SimpleKey(#query, #inFields, #fields, #pageable)",
+               key = "new org.springframework.cache.interceptor.SimpleKey(#query, #inFields, #pageable, #includeHiddenPosts)",
                condition = "@environment.getProperty('studio.features.forums.cache.enabled','true') == 'true'")
-    public List<TopicSummaryView> listTopics(String forumSlug, String query, Set<String> inFields,
-                                             Set<String> fields, Pageable pageable, boolean includeDeleted) {
+    public Page<TopicSummaryView> listTopics(String forumSlug, String query, Set<String> inFields, Pageable pageable,
+                                             boolean includeHiddenPosts) {
         Forum forum = forumRepository.findBySlug(ForumSlug.of(forumSlug))
             .orElseThrow(() -> ForumNotFoundException.bySlug(forumSlug));
-        return topicQueryRepository.findTopics(forum.id(), query, inFields, fields, pageable, includeDeleted)
+        boolean includeDeleted = false;
+        long total = topicQueryRepository.countTopics(forum.id(), query, inFields, includeDeleted);
+        if (total == 0L) {
+            return new PageImpl<>(java.util.List.of(), pageable, 0);
+        }
+        java.util.List<TopicSummaryView> content = topicQueryRepository
+            .findTopics(forum.id(), query, inFields, null, pageable, includeDeleted, includeHiddenPosts)
             .stream()
-            .map(row -> new TopicSummaryView(row.getTopicId(), row.getTitle(), row.getStatus(), row.getUpdatedAt()))
+            .map(row -> new TopicSummaryView(
+                row.getTopicId(),
+                row.getTitle(),
+                row.getStatus(),
+                row.getUpdatedAt(),
+                row.getCreatedById(),
+                row.getCreatedBy(),
+                row.getPostCount(),
+                row.getLastPostUpdatedAt(),
+                row.getLastPostUpdatedById(),
+                row.getLastPostUpdatedBy(),
+                row.getLastPostId(),
+                row.getLastActivityAt(),
+                row.getExcerpt()
+            ))
             .collect(Collectors.toList());
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    public Page<TopicSummaryView> listTopics(String forumSlug, String query, Set<String> inFields, Pageable pageable) {
+        return listTopics(forumSlug, query, inFields, pageable, false);
     }
 }

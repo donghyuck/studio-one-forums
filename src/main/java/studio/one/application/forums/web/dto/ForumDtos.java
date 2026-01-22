@@ -1,6 +1,7 @@
 package studio.one.application.forums.web.dto;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -20,6 +21,8 @@ public class ForumDtos {
         private String slug;
         private String name;
         private String description;
+        private String viewType;
+        private Map<String, String> properties;
     }
 
     @Getter
@@ -27,6 +30,8 @@ public class ForumDtos {
     public static class UpdateForumSettingsRequest {
         private String name;
         private String description;
+        private String viewType;
+        private Map<String, String> properties;
     }
 
     @Getter
@@ -36,6 +41,8 @@ public class ForumDtos {
         private String slug;
         private String name;
         private String description;
+        private String viewType;
+        private Map<String, String> properties;
         private OffsetDateTime updatedAt;
     }
 
@@ -44,6 +51,14 @@ public class ForumDtos {
     public static class ForumSummaryResponse {
         private String slug;
         private String name;
+        private String viewType;
         private OffsetDateTime updatedAt;
+        private long topicCount;
+        private long postCount;
+        private OffsetDateTime lastActivityAt;
+        private Long lastActivityById;
+        private String lastActivityBy;
+        private String lastActivityType;
+        private Long lastActivityId;
     }
 }

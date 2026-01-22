@@ -18,10 +18,10 @@ import studio.one.application.forums.domain.acl.PermissionAction;
 import studio.one.application.forums.domain.model.Forum;
 import studio.one.application.forums.service.forum.ForumQueryService;
 import studio.one.application.forums.service.forum.query.ForumDetailView;
-import studio.one.application.forums.service.forum.query.ForumSummaryView;
 import studio.one.application.forums.web.dto.ForumDtos;
 import studio.one.application.forums.web.mapper.ForumMapper;
 import studio.one.application.forums.web.authz.ForumAuthz;
+import studio.one.application.forums.web.etag.EtagUtil;
 import studio.one.platform.web.dto.ApiResponse;
 
 /**
@@ -46,42 +46,23 @@ public class ForumController {
 
     @GetMapping
     @PreAuthorize("@forumAuthz.canListForums('READ_BOARD')")
-    public ResponseEntity<ApiResponse<Page<ForumDtos.ForumSummaryResponse>>> listForums(@RequestParam(required = false) String q,
+    public ResponseEntity<ApiResponse<Page<ForumDtos.ForumSummaryResponse>>> listForums(@RequestParam(value = "q", required = false) String q,
                                                                                         @RequestParam(required = false, name = "in") String inFields,
                                                                                         Pageable pageable) {
         Set<String> inSet = parseCsvSet(inFields);
         ForumAuthz.ForumListVisibility visibility = forumAuthz.listVisibility();
-        List<Forum> candidates = forumQueryService.listForumCandidates(
-            q, inSet, visibility.isAdmin(), visibility.isMember(), visibility.isSecretListVisible(), visibility.getUserId());
-        List<Forum> visibleForums = forumAuthz.filterForumsByAccess(candidates, PermissionAction.READ_BOARD);
-        long offset = pageable.getOffset();
-        int start = offset >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) offset;
-        int end = Math.min(start + pageable.getPageSize(), visibleForums.size());
-        List<ForumDtos.ForumSummaryResponse> content = start >= visibleForums.size()
-            ? List.of()
-            : visibleForums.subList(start, end).stream()
-                .map(forum -> forumMapper.toSummaryResponse(new ForumSummaryView(
-                    forum.slug().value(),
-                    forum.name(),
-                    forum.updatedAt()
-                )))
-                .toList();
-        Page<ForumDtos.ForumSummaryResponse> responses = new PageImpl<>(content, pageable, visibleForums.size());
+        Page<ForumDtos.ForumSummaryResponse> responses = listAuthorizedForums(
+            q, inSet, visibility, pageable);
         return ResponseEntity.ok(ApiResponse.ok(responses));
     }
 
     @GetMapping("/{forumSlug}")
-    @PreAuthorize("@forumAuthz.canBoard(#forumSlug, 'READ_BOARD')")
+    @PreAuthorize("@forumAuthz.canForum(#forumSlug, 'READ_BOARD')")
     public ResponseEntity<ApiResponse<ForumDtos.ForumResponse>> getForum(@PathVariable String forumSlug) {
         ForumDetailView view = forumQueryService.getForum(forumSlug);
         return ResponseEntity.ok()
-            .eTag(buildEtag(view.getVersion()))
+            .eTag(EtagUtil.buildWeakEtag(view.getVersion()))
             .body(ApiResponse.ok(forumMapper.toResponse(view)));
-    }
-
-
-    private String buildEtag(long version) {
-        return "W/\"" + version + "\"";
     }
 
     protected static Set<String> parseCsvSet(String value) {
@@ -95,6 +76,64 @@ public class ForumController {
             .map(String::toLowerCase)
             .forEach(result::add);
         return result;
+    }
+
+    private Page<ForumDtos.ForumSummaryResponse> listAuthorizedForums(String q, Set<String> inSet,
+                                                                      ForumAuthz.ForumListVisibility visibility,
+                                                                      Pageable pageable) {
+        Page<Forum> candidatePage = forumQueryService.listForumCandidatesPage(
+            q, inSet, visibility.isAdmin(), visibility.isMember(), visibility.isSecretListVisible(),
+            visibility.getUserId(), pageable);
+        List<Forum> allowed = forumAuthz.filterForumsByAccess(candidatePage.getContent(), PermissionAction.READ_BOARD);
+        List<Forum> content = new java.util.ArrayList<>(allowed);
+        if (content.size() < pageable.getPageSize() && candidatePage.hasNext()) {
+            int pageNumber = pageable.getPageNumber() + 1;
+            while (content.size() < pageable.getPageSize()) {
+                Page<Forum> nextPage = forumQueryService.listForumCandidatesPage(
+                    q, inSet, visibility.isAdmin(), visibility.isMember(), visibility.isSecretListVisible(),
+                    visibility.getUserId(), org.springframework.data.domain.PageRequest.of(pageNumber, pageable.getPageSize(), pageable.getSort()));
+                if (nextPage.isEmpty()) {
+                    break;
+                }
+                List<Forum> nextAllowed = forumAuthz.filterForumsByAccess(nextPage.getContent(), PermissionAction.READ_BOARD);
+                content.addAll(nextAllowed);
+                if (!nextPage.hasNext()) {
+                    break;
+                }
+                pageNumber += 1;
+            }
+            if (content.size() > pageable.getPageSize()) {
+                content = content.subList(0, pageable.getPageSize());
+            }
+        }
+
+        long totalAllowed = countAuthorizedForums(q, inSet, visibility, pageable.getSort());
+        List<ForumDtos.ForumSummaryResponse> mapped = forumQueryService.summarizeForums(content).stream()
+            .map(forumMapper::toSummaryResponse)
+            .toList();
+        return new PageImpl<>(mapped, pageable, totalAllowed);
+    }
+
+    private long countAuthorizedForums(String q, Set<String> inSet, ForumAuthz.ForumListVisibility visibility,
+                                       org.springframework.data.domain.Sort sort) {
+        int pageSize = 200;
+        int page = 0;
+        long total = 0;
+        while (true) {
+            Page<Forum> candidatePage = forumQueryService.listForumCandidatesPage(
+                q, inSet, visibility.isAdmin(), visibility.isMember(), visibility.isSecretListVisible(),
+                visibility.getUserId(), org.springframework.data.domain.PageRequest.of(page, pageSize, sort));
+            if (candidatePage.isEmpty()) {
+                break;
+            }
+            List<Forum> allowed = forumAuthz.filterForumsByAccess(candidatePage.getContent(), PermissionAction.READ_BOARD);
+            total += allowed.size();
+            if (!candidatePage.hasNext()) {
+                break;
+            }
+            page += 1;
+        }
+        return total;
     }
 
 }

@@ -42,6 +42,13 @@ public class Post {
         this.hiddenAt = hiddenAt;
     }
 
+    public void updateContent(String content, Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
+        this.content = content;
+        this.updatedById = updatedById;
+        this.updatedBy = updatedBy;
+        this.updatedAt = updatedAt;
+    }
+
     public void touchUpdated(Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
         this.updatedById = updatedById;
         this.updatedBy = updatedBy;

@@ -22,6 +22,7 @@ import studio.one.application.forums.service.forum.ForumQueryService;
 import studio.one.application.forums.service.forum.query.ForumDetailView;
 import studio.one.application.forums.web.dto.ForumDtos;
 import studio.one.application.forums.web.mapper.ForumMapper;
+import studio.one.application.forums.web.etag.EtagUtil;
 import studio.one.platform.web.dto.ApiResponse;
 
 /**
@@ -37,12 +38,13 @@ import studio.one.platform.web.dto.ApiResponse;
  */
 @RestController
 @RequestMapping("${studio.features.forums.web.mgmt-base-path:/api/mgmt/forums}")
-public class ForumAdminController {
+public class ForumMgmtController { 
+    
     private final ForumCommandService forumCommandService;
     private final ForumQueryService forumQueryService;
     private final ForumMapper forumMapper = new ForumMapper();
 
-    public ForumAdminController(ForumCommandService forumCommandService, ForumQueryService forumQueryService) {
+    public ForumMgmtController(ForumCommandService forumCommandService, ForumQueryService forumQueryService) {
         this.forumCommandService = forumCommandService;
         this.forumQueryService = forumQueryService;
     }
@@ -50,11 +52,12 @@ public class ForumAdminController {
     @GetMapping
     @PreAuthorize("@endpointAuthz.can('features:forums','read')")
     public ResponseEntity<ApiResponse<Page<ForumDtos.ForumSummaryResponse>>> listForums(
-            @RequestParam(required = false) String q,
+            @RequestParam(value = "q", required = false) String q,
             @RequestParam(required = false, name = "in") String inFields,
+            @RequestParam(required = false, defaultValue = "false") boolean includeHidden,
             Pageable pageable) {
         Set<String> inSet = ForumController.parseCsvSet(inFields);
-        Page<ForumDtos.ForumSummaryResponse> responses = forumQueryService.listForums(q, inSet, pageable)
+        Page<ForumDtos.ForumSummaryResponse> responses = forumQueryService.listForums(q, inSet, pageable, includeHidden)
                 .map(forumMapper::toSummaryResponse);
         return ResponseEntity.ok(ApiResponse.ok(responses));
     }
@@ -64,12 +67,12 @@ public class ForumAdminController {
     public ResponseEntity<ApiResponse<ForumDtos.ForumResponse>> getForum(@PathVariable String forumSlug) {
         ForumDetailView view = forumQueryService.getForum(forumSlug);
         return ResponseEntity.ok()
-                .eTag(buildEtag(view.getVersion()))
+                .eTag(EtagUtil.buildWeakEtag(view.getVersion()))
                 .body(ApiResponse.ok(forumMapper.toResponse(view)));
     }
 
     @PostMapping
-   @PreAuthorize("@endpointAuthz.can('features:forums','write')")
+    @PreAuthorize("@endpointAuthz.can('features:forums','write')")
     public ResponseEntity<ApiResponse<ForumDtos.ForumResponse>> createForum(
             @RequestBody ForumDtos.CreateForumRequest request,
             @AuthenticationPrincipal(expression = "userId") Long userId,
@@ -80,7 +83,7 @@ public class ForumAdminController {
         ForumDetailView view = forumQueryService.getForum(request.getSlug());
         return ResponseEntity
                 .ok()
-                .eTag(buildEtag(view.getVersion()))
+                .eTag(EtagUtil.buildWeakEtag(view.getVersion()))
                 .body(ApiResponse.ok(forumMapper.toResponse(view)));
     }
 
@@ -89,27 +92,18 @@ public class ForumAdminController {
     public ResponseEntity<ApiResponse<ForumDtos.ForumResponse>> updateSettings(
             @PathVariable String forumSlug,
             @RequestBody ForumDtos.UpdateForumSettingsRequest request,
-            @RequestHeader("If-Match") String ifMatch,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
             @AuthenticationPrincipal(expression = "userId") Long userId,
             @AuthenticationPrincipal(expression = "username") String username) {
         Long updatedById = requireUserId(userId);
         String updatedBy = requireUsername(username);
-        long expectedVersion = parseIfMatchVersion(ifMatch);
+        long expectedVersion = EtagUtil.parseIfMatchVersion(ifMatch);
         forumCommandService.updateSettings(
                 forumMapper.toUpdateCommand(forumSlug, request, updatedById, updatedBy, expectedVersion));
         ForumDetailView view = forumQueryService.getForum(forumSlug);
         return ResponseEntity.ok()
-                .eTag(buildEtag(view.getVersion()))
+                .eTag(EtagUtil.buildWeakEtag(view.getVersion()))
                 .body(ApiResponse.ok(forumMapper.toResponse(view)));
-    }
-
-    private String buildEtag(long version) {
-        return "W/\"" + version + "\"";
-    }
-
-    private long parseIfMatchVersion(String ifMatch) {
-        String token = ifMatch.replace("W/", "").replace("\"", "").trim();
-        return Long.parseLong(token);
     }
 
     private Long requireUserId(Long userId) {

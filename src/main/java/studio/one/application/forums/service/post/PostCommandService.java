@@ -17,6 +17,7 @@ import studio.one.application.forums.service.audit.ForumAuditLogService;
 import studio.one.application.forums.service.post.command.CreatePostCommand;
 import studio.one.application.forums.service.post.command.DeletePostCommand;
 import studio.one.application.forums.service.post.command.HidePostCommand;
+import studio.one.application.forums.service.post.command.UpdatePostCommand;
 
 /**
  * Forums 명령 서비스.
@@ -90,6 +91,21 @@ public class PostCommandService {
         auditLogService.record(topic.forumId(), "POST", saved.id(), "HIDE", command.updatedById(),
             command.reason() == null ? null : Map.of("reason", command.reason()));
         return saved;
+    }
+
+    @Transactional
+    public Post updatePost(UpdatePostCommand command) {
+        Post post = postRepository.findById(command.postId())
+            .orElseThrow(() -> PostNotFoundException.byId(command.postId()));
+        if (post.deletedAt() != null) {
+            throw PostNotFoundException.byId(command.postId());
+        }
+        if (post.version() != command.expectedVersion()) {
+            throw PostVersionMismatchException.byId(command.postId());
+        }
+        OffsetDateTime now = OffsetDateTime.now();
+        post.updateContent(command.content(), command.updatedById(), command.updatedBy(), now);
+        return postRepository.save(post);
     }
 
     @Transactional

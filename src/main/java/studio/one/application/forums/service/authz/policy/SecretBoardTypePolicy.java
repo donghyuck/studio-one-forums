@@ -1,13 +1,22 @@
 package studio.one.application.forums.service.authz.policy;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import studio.one.application.forums.domain.acl.PermissionAction;
+import studio.one.application.forums.domain.type.ForumType;
 import studio.one.application.forums.service.authz.PolicyDecision;
 
-public class SecretBoardTypePolicy implements BoardTypePolicy {
+@Component
+public class SecretBoardTypePolicy implements ForumTypePolicy {
     private final boolean listVisibleToMembers;
 
-    public SecretBoardTypePolicy(boolean listVisibleToMembers) {
+    public SecretBoardTypePolicy(@Value("${studio.features.forums.authz.secret-list-visible:false}") boolean listVisibleToMembers) {
         this.listVisibleToMembers = listVisibleToMembers;
+    }
+
+    @Override
+    public ForumType type() {
+        return ForumType.SECRET;
     }
 
     @Override

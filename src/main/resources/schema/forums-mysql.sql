@@ -32,7 +32,7 @@ create table if not exists tb_application_categories (
 create table if not exists tb_application_topics (
     id bigint auto_increment primary key,
     forum_id bigint not null,
-    category_id bigint not null,
+    category_id bigint,
     title varchar(400) not null,
     tags varchar(2000),
     status varchar(30) not null,

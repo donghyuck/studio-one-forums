@@ -27,20 +27,20 @@ public class ForumAuthorizationService {
         this.postRepository = postRepository;
     }
 
-    public boolean canBoard(long boardId, String role, PermissionAction action) {
-        return canBoard(boardId, Set.of(role), action);
+    public boolean canForum(long forumId, String role, PermissionAction action) {
+        return canForum(forumId, Set.of(role), action);
     }
 
-    public boolean canBoard(long boardId, Collection<String> roles, PermissionAction action) {
-        return decideBoard(boardId, roles, action) == PolicyDecision.ALLOW;
+    public boolean canForum(long forumId, Collection<String> roles, PermissionAction action) {
+        return decideForum(forumId, roles, action) == PolicyDecision.ALLOW;
     }
 
-    public boolean canCategory(long boardId, Long categoryId, String role, PermissionAction action) {
-        return canCategory(boardId, categoryId, Set.of(role), action);
+    public boolean canCategory(long forumId, Long categoryId, String role, PermissionAction action) {
+        return canCategory(forumId, categoryId, Set.of(role), action);
     }
 
-    public boolean canCategory(long boardId, Long categoryId, Collection<String> roles, PermissionAction action) {
-        return decideCategory(boardId, categoryId, roles, action) == PolicyDecision.ALLOW;
+    public boolean canCategory(long forumId, Long categoryId, Collection<String> roles, PermissionAction action) {
+        return decideCategory(forumId, categoryId, roles, action) == PolicyDecision.ALLOW;
     }
 
     public boolean canTopic(long topicId, Collection<String> roles, PermissionAction action) {
@@ -74,26 +74,47 @@ public class ForumAuthorizationService {
             .orElse(false);
     }
 
-    public PolicyDecision decideBoard(long boardId, Collection<String> roles, PermissionAction action) {
-        return decide(boardId, null, toRoleSet(roles), Set.of(), null, null, action, null, null);
+    public PolicyDecision decideForum(long forumId, Collection<String> roles, PermissionAction action) {
+        return decide(forumId, null, toRoleSet(roles), Set.of(), null, null, action, null, null);
     }
 
-    public PolicyDecision decideCategory(long boardId, Long categoryId, Collection<String> roles, PermissionAction action) {
-        return decide(boardId, categoryId, toRoleSet(roles), Set.of(), null, null, action, null, null);
+    public PolicyDecision decideCategory(long forumId, Long categoryId, Collection<String> roles, PermissionAction action) {
+        return decide(forumId, categoryId, toRoleSet(roles), Set.of(), null, null, action, null, null);
     }
 
-    public PolicyDecision decideWithOwnership(long boardId, Long categoryId, Collection<String> roles,
+    public PolicyDecision decideWithOwnership(long forumId, Long categoryId, Collection<String> roles,
                                               PermissionAction action, Long ownerId, Long currentUserId) {
-        return decideWithOwnership(boardId, categoryId, roles, Set.of(), action, ownerId, currentUserId, null);
+        return decideWithOwnership(forumId, categoryId, roles, Set.of(), action, ownerId, currentUserId, null);
     }
 
-    public PolicyDecision decideWithOwnership(long boardId, Long categoryId, Collection<String> roles,
+    public PolicyDecision decideWithOwnership(long forumId, Long categoryId, Collection<String> roles,
                                               Set<Long> roleIds, PermissionAction action, Long ownerId,
                                               Long currentUserId, String username) {
-        return decide(boardId, categoryId, toRoleSet(roles), roleIds, currentUserId, username, action, ownerId, currentUserId);
+        return decide(forumId, categoryId, toRoleSet(roles), roleIds, currentUserId, username, action, ownerId, currentUserId);
     }
 
-    private PolicyDecision decide(long boardId, Long categoryId, Set<String> roleNames, Set<Long> roleIds,
+    public java.util.Map<Long, PolicyDecision> decideForumsBulk(Collection<Long> forumIds, Collection<String> roles,
+                                                                PermissionAction action, Long userId, String username) {
+        Set<Long> forumIdSet = forumIds == null ? Set.of() : new java.util.HashSet<>(forumIds);
+        if (forumIdSet.isEmpty()) {
+            return java.util.Map.of();
+        }
+        Set<String> roleNames = toRoleSet(roles);
+        List<ForumAclRule> rules = forumAclRuleRepository.findRulesBulk(
+            forumIdSet, null, action, roleNames, Set.of(), userId, username);
+        java.util.Map<Long, List<ForumAclRule>> grouped = new java.util.HashMap<>();
+        for (ForumAclRule rule : rules) {
+            grouped.computeIfAbsent(rule.forumId(), ignored -> new java.util.ArrayList<>()).add(rule);
+        }
+        java.util.Map<Long, PolicyDecision> decisions = new java.util.HashMap<>();
+        for (Long forumId : forumIdSet) {
+            List<ForumAclRule> forumRules = grouped.getOrDefault(forumId, List.of());
+            decisions.put(forumId, evaluateRules(forumRules, null, userId));
+        }
+        return java.util.Collections.unmodifiableMap(decisions);
+    }
+
+    private PolicyDecision decide(long forumId, Long categoryId, Set<String> roleNames, Set<Long> roleIds,
                                   Long userId, String username, PermissionAction action,
                                   Long ownerId, Long currentUserId) {
         boolean hasSubjects = (roleNames != null && !roleNames.isEmpty())
@@ -103,8 +124,15 @@ public class ForumAuthorizationService {
         if (!hasSubjects) {
             return PolicyDecision.ABSTAIN;
         }
-        List<ForumAclRule> rules = forumAclRuleRepository.findRules(boardId, categoryId, action, roleNames, roleIds, userId, username);
+        List<ForumAclRule> rules = forumAclRuleRepository.findRules(forumId, categoryId, action, roleNames, roleIds, userId, username);
         if (rules.isEmpty()) {
+            return PolicyDecision.ABSTAIN;
+        }
+        return evaluateRules(rules, ownerId, currentUserId);
+    }
+
+    private PolicyDecision evaluateRules(List<ForumAclRule> rules, Long ownerId, Long currentUserId) {
+        if (rules == null || rules.isEmpty()) {
             return PolicyDecision.ABSTAIN;
         }
         rules.sort(ForumAuthorizationService::compareRules);
@@ -161,5 +189,17 @@ public class ForumAuthorizationService {
         return roles.stream()
             .filter(role -> role != null && !role.isBlank())
             .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    public boolean canBoard(long boardId, String role, PermissionAction action) {
+        return canForum(boardId, role, action);
+    }
+
+    public boolean canBoard(long boardId, Collection<String> roles, PermissionAction action) {
+        return canForum(boardId, roles, action);
+    }
+
+    public PolicyDecision decideBoard(long boardId, Collection<String> roles, PermissionAction action) {
+        return decideForum(boardId, roles, action);
     }
 }

@@ -103,6 +103,14 @@ class TopicQueryServiceTest {
                                             boolean isMember, boolean secretListVisible, Long userId) {
             return List.of(forum);
         }
+
+        @Override
+        public org.springframework.data.domain.Page<Forum> searchCandidatesPage(String query, Set<String> inFields,
+                                                                                boolean isAdmin, boolean isMember,
+                                                                                boolean secretListVisible, Long userId,
+                                                                                org.springframework.data.domain.Pageable pageable) {
+            return new org.springframework.data.domain.PageImpl<>(List.of(forum), pageable, 1);
+        }
     }
 
     private static class SingleTopicRepo implements TopicRepository {
@@ -126,8 +134,13 @@ class TopicQueryServiceTest {
     private static class EmptyTopicQueryRepo implements TopicQueryRepository {
         @Override
         public List<studio.one.application.forums.persistence.jdbc.TopicListRow> findTopics(Long forumId, String query, Set<String> inFields, Set<String> fields,
-                                                                                           org.springframework.data.domain.Pageable pageable, boolean includeDeleted) {
+                                                                                           org.springframework.data.domain.Pageable pageable, boolean includeDeleted, boolean includeHiddenPosts) {
             return List.of();
+        }
+
+        @Override
+        public long countTopics(Long forumId, String query, Set<String> inFields, boolean includeDeleted) {
+            return 0L;
         }
     }
 }

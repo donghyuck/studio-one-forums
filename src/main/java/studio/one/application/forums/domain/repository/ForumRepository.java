@@ -30,4 +30,7 @@ public interface ForumRepository {
 
     java.util.List<Forum> searchCandidates(String query, Set<String> inFields, boolean isAdmin,
                                            boolean isMember, boolean secretListVisible, Long userId);
+
+    Page<Forum> searchCandidatesPage(String query, Set<String> inFields, boolean isAdmin,
+                                     boolean isMember, boolean secretListVisible, Long userId, Pageable pageable);
 }

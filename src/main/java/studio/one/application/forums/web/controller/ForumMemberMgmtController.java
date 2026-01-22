@@ -23,15 +23,15 @@ import studio.one.platform.web.dto.ApiResponse;
 
 @RestController
 @RequestMapping("${studio.features.forums.web.mgmt-base-path:/api/mgmt/forums}/{forumSlug}/members")
-public class ForumMemberAdminController {
+public class ForumMemberMgmtController {
     private final ForumMemberService forumMemberService;
 
-    public ForumMemberAdminController(ForumMemberService forumMemberService) {
+    public ForumMemberMgmtController(ForumMemberService forumMemberService) {
         this.forumMemberService = forumMemberService;
     }
 
     @PostMapping
-    @PreAuthorize("@forumAuthz.canBoard(#forumSlug, 'MANAGE_BOARD')")
+    @PreAuthorize("@forumAuthz.canForum(#forumSlug, 'MANAGE_BOARD')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> addMember(@PathVariable String forumSlug,
                                                                       @RequestBody ForumMemberDtos.UpsertMemberRequest request,
                                                                       @AuthenticationPrincipal(expression = "userId") Long userId) {
@@ -41,7 +41,7 @@ public class ForumMemberAdminController {
     }
 
     @PatchMapping("/{targetUserId}")
-    @PreAuthorize("@forumAuthz.canBoard(#forumSlug, 'MANAGE_BOARD')")
+    @PreAuthorize("@forumAuthz.canForum(#forumSlug, 'MANAGE_BOARD')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateMember(@PathVariable String forumSlug,
                                                                          @PathVariable Long targetUserId,
                                                                          @RequestBody ForumMemberDtos.UpsertMemberRequest request,
@@ -53,7 +53,7 @@ public class ForumMemberAdminController {
     }
 
     @DeleteMapping("/{targetUserId}")
-    @PreAuthorize("@forumAuthz.canBoard(#forumSlug, 'MANAGE_BOARD')")
+    @PreAuthorize("@forumAuthz.canForum(#forumSlug, 'MANAGE_BOARD')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> removeMember(@PathVariable String forumSlug,
                                                                          @PathVariable Long targetUserId,
                                                                          @AuthenticationPrincipal(expression = "userId") Long userId) {
@@ -63,7 +63,7 @@ public class ForumMemberAdminController {
     }
 
     @GetMapping
-    @PreAuthorize("@forumAuthz.canBoard(#forumSlug, 'MANAGE_BOARD')")
+    @PreAuthorize("@forumAuthz.canForum(#forumSlug, 'MANAGE_BOARD')")
     public ResponseEntity<ApiResponse<List<ForumMemberDtos.MemberResponse>>> listMembers(@PathVariable String forumSlug,
                                                                                           @RequestParam(defaultValue = "0") int page,
                                                                                           @RequestParam(defaultValue = "20") int size) {

@@ -50,15 +50,15 @@ import studio.one.application.forums.persistence.jpa.repo.ForumAclRuleJpaReposit
 import studio.one.application.forums.persistence.jpa.repo.ForumJpaRepository;
 import studio.one.application.forums.persistence.jpa.repo.PostJpaRepository;
 import studio.one.application.forums.persistence.jpa.repo.TopicJpaRepository;
-import studio.one.application.forums.web.controller.CategoryAdminController;
+import studio.one.application.forums.web.controller.CategoryMgmtController;
 import studio.one.application.forums.web.controller.CategoryController;
-import studio.one.application.forums.web.controller.ForumAdminController;
+import studio.one.application.forums.web.controller.ForumMgmtController;
 import studio.one.application.forums.web.controller.ForumController;
-import studio.one.application.forums.web.controller.PostAdminController;
+import studio.one.application.forums.web.controller.PostMgmtController;
 import studio.one.application.forums.web.controller.PostController;
-import studio.one.application.forums.web.controller.TopicAdminController;
+import studio.one.application.forums.web.controller.TopicMgmtController;
 import studio.one.application.forums.web.controller.TopicController;
-import studio.one.application.forums.web.controller.ForumMemberAdminController;
+import studio.one.application.forums.web.controller.ForumMemberMgmtController;
 import studio.one.application.forums.domain.event.listener.ForumsCacheEvictListener;
 import studio.one.platform.autoconfigure.EntityScanRegistrarSupport;
 import studio.one.platform.autoconfigure.I18nKeys;
@@ -236,11 +236,11 @@ public class ForumsAutoConfiguration {
         CategoryController.class,
         TopicController.class,
         PostController.class,
-        ForumAdminController.class,
-        ForumMemberAdminController.class,
-        CategoryAdminController.class,
-        TopicAdminController.class,
-        PostAdminController.class
+        ForumMgmtController.class,
+        ForumMemberMgmtController.class,
+        CategoryMgmtController.class,
+        TopicMgmtController.class,
+        PostMgmtController.class
     })
     static class ForumsWebConfig {
 

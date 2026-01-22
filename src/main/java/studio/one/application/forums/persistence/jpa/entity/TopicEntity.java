@@ -27,7 +27,7 @@ public class TopicEntity {
     @Column(nullable = false)
     private Long forumId;
 
-    @Column(nullable = false)
+    @Column
     private Long categoryId;
 
     @Column(nullable = false)

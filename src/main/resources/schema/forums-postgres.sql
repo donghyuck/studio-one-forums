@@ -89,7 +89,7 @@ create table if not exists tb_application_categories (
 create table if not exists tb_application_topics (
     id bigserial primary key,
     forum_id bigint not null references tb_application_forums(id) on delete cascade,
-    category_id bigint not null references tb_application_categories(id) on delete cascade,
+    category_id bigint references tb_application_categories(id) on delete cascade,
     title varchar(400) not null,
     tags varchar(2000),
     status varchar(30) not null,

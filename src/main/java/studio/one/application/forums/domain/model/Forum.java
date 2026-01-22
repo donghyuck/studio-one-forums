@@ -1,7 +1,9 @@
 package studio.one.application.forums.domain.model;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -34,9 +36,13 @@ public class Forum {
     private OffsetDateTime updatedAt;
     private final long version;
 
-    public void updateSettings(String name, String description, Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
+    public void updateSettings(String name, String description, Map<String, String> properties,
+                               Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
         this.name = name;
         this.description = description;
+        if (properties != null && !Objects.equals(this.properties, properties)) {
+            this.properties = new HashMap<>(properties);
+        }
         this.updatedById = updatedById;
         this.updatedBy = updatedBy;
         this.updatedAt = updatedAt;

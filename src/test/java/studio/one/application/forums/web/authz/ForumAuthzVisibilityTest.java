@@ -16,13 +16,23 @@ import studio.one.application.forums.domain.model.Post;
 import studio.one.application.forums.domain.model.Topic;
 import studio.one.application.forums.domain.repository.CategoryRepository;
 import studio.one.application.forums.domain.repository.ForumAclRuleRepository;
+import studio.one.application.forums.domain.repository.ForumMemberRepository;
 import studio.one.application.forums.domain.repository.ForumRepository;
 import studio.one.application.forums.domain.repository.PostRepository;
 import studio.one.application.forums.domain.repository.TopicRepository;
 import studio.one.application.forums.domain.type.ForumType;
 import studio.one.application.forums.domain.type.TopicStatus;
 import studio.one.application.forums.domain.vo.ForumSlug;
+import studio.one.application.forums.service.authz.ForumAccessResolver;
+import studio.one.application.forums.service.authz.ForumAclAuthorizer;
+import studio.one.application.forums.service.authz.ForumAuthorizer;
 import studio.one.application.forums.service.authz.ForumAuthorizationService;
+import studio.one.application.forums.service.authz.ForumPolicyEngine;
+import studio.one.application.forums.service.authz.ForumPolicyRegistry;
+import studio.one.application.forums.service.authz.policy.AdminOnlyBoardTypePolicy;
+import studio.one.application.forums.service.authz.policy.CommonBoardTypePolicy;
+import studio.one.application.forums.service.authz.policy.NoticeBoardTypePolicy;
+import studio.one.application.forums.service.authz.policy.SecretBoardTypePolicy;
 
 class ForumAuthzVisibilityTest {
 
@@ -62,14 +72,11 @@ class ForumAuthzVisibilityTest {
             null,
             0L
         );
-        ForumAuthz authz = new ForumAuthz(
-            new ForumAuthorizationService(new EmptyAclRepo(), new SingleTopicRepo(topic), new EmptyPostRepo()),
-            new SingleForumRepo(forum),
-            new EmptyCategoryRepo(),
+        ForumAuthz authz = newAuthz(
+            forum,
             new SingleTopicRepo(topic),
             new EmptyPostRepo(),
             new EmptyForumMemberRepo(),
-            Set.of(),
             false
         );
 
@@ -94,29 +101,64 @@ class ForumAuthzVisibilityTest {
             OffsetDateTime.now(),
             0L
         );
-        ForumAuthz authz = new ForumAuthz(
-            new ForumAuthorizationService(new EmptyAclRepo(), new EmptyTopicRepo(), new EmptyPostRepo()),
-            new SingleForumRepo(forum),
-            new EmptyCategoryRepo(),
+        ForumAuthz authz = newAuthz(
+            forum,
             new EmptyTopicRepo(),
             new EmptyPostRepo(),
             new ForumScopedMemberRepo(1L, studio.one.application.forums.domain.type.ForumMemberRole.MODERATOR),
-            Set.of(),
             false
         );
 
-        boolean allowed = authz.canBoard("notice", PermissionAction.CREATE_TOPIC.name());
+        boolean allowed = authz.canForum("notice", PermissionAction.CREATE_TOPIC.name());
 
         assertThat(allowed).isTrue();
     }
 
     private static class EmptyAclRepo implements ForumAclRuleRepository {
         @Override
-        public List<studio.one.application.forums.domain.acl.ForumAclRule> findRules(long boardId, Long categoryId,
+        public List<studio.one.application.forums.domain.acl.ForumAclRule> findRules(long forumId, Long categoryId,
                                                                                     PermissionAction action, Set<String> roleNames,
                                                                                     Set<Long> roleIds, Long userId, String username) {
             return List.of();
         }
+
+        @Override
+        public List<studio.one.application.forums.domain.acl.ForumAclRule> findRulesBulk(Set<Long> forumIds, Long categoryId,
+                                                                                        PermissionAction action, Set<String> roleNames,
+                                                                                        Set<Long> roleIds, Long userId, String username) {
+            return List.of();
+        }
+    }
+
+    private ForumAuthz newAuthz(Forum forum,
+                                TopicRepository topicRepository,
+                                PostRepository postRepository,
+                                ForumMemberRepository forumMemberRepository,
+                                boolean secretListVisible) {
+        ForumAuthorizationService authorizationService = new ForumAuthorizationService(
+            new EmptyAclRepo(),
+            topicRepository,
+            postRepository
+        );
+        ForumAccessResolver accessResolver = new ForumAccessResolver(forumMemberRepository, Set.of());
+        ForumPolicyRegistry registry = new ForumPolicyRegistry(List.of(
+            new CommonBoardTypePolicy(),
+            new NoticeBoardTypePolicy(),
+            new SecretBoardTypePolicy(secretListVisible),
+            new AdminOnlyBoardTypePolicy()
+        ));
+        ForumPolicyEngine policyEngine = new ForumPolicyEngine(registry);
+        ForumAclAuthorizer aclAuthorizer = new ForumAclAuthorizer(authorizationService);
+        ForumAuthorizer authorizer = new ForumAuthorizer(accessResolver, policyEngine, aclAuthorizer);
+        return new ForumAuthz(
+            new SingleForumRepo(forum),
+            new EmptyCategoryRepo(),
+            topicRepository,
+            postRepository,
+            authorizer,
+            accessResolver,
+            secretListVisible
+        );
     }
 
     private static class SingleForumRepo implements ForumRepository {
@@ -160,6 +202,14 @@ class ForumAuthzVisibilityTest {
         public List<Forum> searchCandidates(String query, Set<String> inFields, boolean isAdmin,
                                             boolean isMember, boolean secretListVisible, Long userId) {
             return List.of(forum);
+        }
+
+        @Override
+        public org.springframework.data.domain.Page<Forum> searchCandidatesPage(String query, Set<String> inFields,
+                                                                                boolean isAdmin, boolean isMember,
+                                                                                boolean secretListVisible, Long userId,
+                                                                                org.springframework.data.domain.Pageable pageable) {
+            return new org.springframework.data.domain.PageImpl<>(List.of(forum), pageable, 1);
         }
     }
 

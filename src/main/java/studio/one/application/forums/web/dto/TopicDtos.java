@@ -25,6 +25,13 @@ public class TopicDtos {
 
     @Getter
     @Setter
+    public static class UpdateTopicRequest {
+        private String title;
+        private List<String> tags;
+    }
+
+    @Getter
+    @Setter
     public static class ChangeTopicStatusRequest {
         private String status;
     }
@@ -59,5 +66,14 @@ public class TopicDtos {
         private String title;
         private String status;
         private OffsetDateTime updatedAt;
+        private Long createdById;
+        private String createdBy;
+        private long postCount;
+        private OffsetDateTime lastPostUpdatedAt;
+        private Long lastPostUpdatedById;
+        private String lastPostUpdatedBy;
+        private Long lastPostId;
+        private OffsetDateTime lastActivityAt;
+        private String excerpt;
     }
 }

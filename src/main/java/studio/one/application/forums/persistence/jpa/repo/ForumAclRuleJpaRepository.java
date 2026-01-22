@@ -12,7 +12,7 @@ public interface ForumAclRuleJpaRepository extends JpaRepository<ForumAclRuleEnt
     @Query("""
         select r
           from ForumAclRuleEntity r
-         where r.boardId = :boardId
+         where r.forumId = :forumId
            and r.action = :action
            and r.enabled = true
            and (
@@ -26,7 +26,7 @@ public interface ForumAclRuleJpaRepository extends JpaRepository<ForumAclRuleEnt
                 or (:categoryId is not null and (r.categoryId = :categoryId or r.categoryId is null))
            )
         """)
-    List<ForumAclRuleEntity> findRules(@Param("boardId") long boardId,
+    List<ForumAclRuleEntity> findRules(@Param("forumId") long forumId,
                                        @Param("categoryId") Long categoryId,
                                        @Param("action") PermissionAction action,
                                        @Param("roleNames") Set<String> roleNames,
@@ -37,4 +37,33 @@ public interface ForumAclRuleJpaRepository extends JpaRepository<ForumAclRuleEnt
                                        @Param("hasRoleIds") boolean hasRoleIds,
                                        @Param("hasUserId") boolean hasUserId,
                                        @Param("hasUsername") boolean hasUsername);
+
+    @Query("""
+        select r
+          from ForumAclRuleEntity r
+         where r.forumId in :forumIds
+           and r.action = :action
+           and r.enabled = true
+           and (
+                (:hasRoleNames = true and r.subjectType = 'ROLE' and r.identifierType = 'NAME' and r.subjectName in :roleNames)
+                or (:hasRoleIds = true and r.subjectType = 'ROLE' and r.identifierType = 'ID' and r.subjectId in :roleIds)
+                or (:hasUserId = true and r.subjectType = 'USER' and r.identifierType = 'ID' and r.subjectId = :userId)
+                or (:hasUsername = true and r.subjectType = 'USER' and r.identifierType = 'NAME' and r.subjectName = :username)
+           )
+           and (
+                (:categoryId is null and r.categoryId is null)
+                or (:categoryId is not null and (r.categoryId = :categoryId or r.categoryId is null))
+           )
+        """)
+    List<ForumAclRuleEntity> findRulesBulk(@Param("forumIds") Set<Long> forumIds,
+                                           @Param("categoryId") Long categoryId,
+                                           @Param("action") PermissionAction action,
+                                           @Param("roleNames") Set<String> roleNames,
+                                           @Param("roleIds") Set<Long> roleIds,
+                                           @Param("userId") Long userId,
+                                           @Param("username") String username,
+                                           @Param("hasRoleNames") boolean hasRoleNames,
+                                           @Param("hasRoleIds") boolean hasRoleIds,
+                                           @Param("hasUserId") boolean hasUserId,
+                                           @Param("hasUsername") boolean hasUsername);
 }

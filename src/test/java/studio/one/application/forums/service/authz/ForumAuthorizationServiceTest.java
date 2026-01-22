@@ -44,7 +44,7 @@ class ForumAuthorizationServiceTest {
         );
         ForumAuthorizationService service = serviceWithRules(rules, null, null);
 
-        boolean allowed = service.canBoard(10L, Set.of("ROLE_MEMBER"), PermissionAction.READ_TOPIC_LIST);
+        boolean allowed = service.canForum(10L, Set.of("ROLE_MEMBER"), PermissionAction.READ_TOPIC_LIST);
 
         assertThat(allowed).isFalse();
     }
@@ -132,11 +132,11 @@ class ForumAuthorizationServiceTest {
         );
     }
 
-    private ForumAclRule rule(Long ruleId, Long boardId, Long categoryId, String role, PermissionAction action,
+    private ForumAclRule rule(Long ruleId, Long forumId, Long categoryId, String role, PermissionAction action,
                               Effect effect, Ownership ownership, int priority) {
         return new ForumAclRule(
             ruleId,
-            boardId,
+            forumId,
             categoryId,
             SubjectType.ROLE,
             IdentifierType.NAME,
@@ -155,11 +155,11 @@ class ForumAuthorizationServiceTest {
         );
     }
 
-    private ForumAclRule userRule(Long ruleId, Long boardId, Long categoryId, Long userId, PermissionAction action,
+    private ForumAclRule userRule(Long ruleId, Long forumId, Long categoryId, Long userId, PermissionAction action,
                                   Effect effect, Ownership ownership, int priority) {
         return new ForumAclRule(
             ruleId,
-            boardId,
+            forumId,
             categoryId,
             SubjectType.USER,
             IdentifierType.ID,
@@ -178,11 +178,11 @@ class ForumAuthorizationServiceTest {
         );
     }
 
-    private ForumAclRule userNameRule(Long ruleId, Long boardId, Long categoryId, String username,
+    private ForumAclRule userNameRule(Long ruleId, Long forumId, Long categoryId, String username,
                                       PermissionAction action, Effect effect, Ownership ownership, int priority) {
         return new ForumAclRule(
             ruleId,
-            boardId,
+            forumId,
             categoryId,
             SubjectType.USER,
             IdentifierType.NAME,
@@ -256,11 +256,23 @@ class ForumAuthorizationServiceTest {
         }
 
         @Override
-        public List<ForumAclRule> findRules(long boardId, Long categoryId, PermissionAction action,
+        public List<ForumAclRule> findRules(long forumId, Long categoryId, PermissionAction action,
                                             Set<String> roleNames, Set<Long> roleIds, Long userId, String username) {
             return rules.stream()
                 .filter(rule -> rule.enabled())
-                .filter(rule -> rule.boardId().equals(boardId))
+                .filter(rule -> rule.forumId().equals(forumId))
+                .filter(rule -> rule.action() == action)
+                .filter(rule -> subjectMatches(rule, roleNames, roleIds, userId, username))
+                .filter(rule -> categoryId == null ? rule.categoryId() == null : (rule.categoryId() == null || rule.categoryId().equals(categoryId)))
+                .toList();
+        }
+
+        @Override
+        public List<ForumAclRule> findRulesBulk(Set<Long> forumIds, Long categoryId, PermissionAction action,
+                                                Set<String> roleNames, Set<Long> roleIds, Long userId, String username) {
+            return rules.stream()
+                .filter(rule -> rule.enabled())
+                .filter(rule -> forumIds != null && forumIds.contains(rule.forumId()))
                 .filter(rule -> rule.action() == action)
                 .filter(rule -> subjectMatches(rule, roleNames, roleIds, userId, username))
                 .filter(rule -> categoryId == null ? rule.categoryId() == null : (rule.categoryId() == null || rule.categoryId().equals(categoryId)))

@@ -22,8 +22,8 @@ public class ForumAclRuleEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long ruleId;
 
-    @Column(nullable = false)
-    private Long boardId;
+    @Column(name = "board_id", nullable = false)
+    private Long forumId;
 
     private Long categoryId;
 
@@ -71,12 +71,12 @@ public class ForumAclRuleEntity {
     protected ForumAclRuleEntity() {
     }
 
-    public ForumAclRuleEntity(Long boardId, Long categoryId, String role, SubjectType subjectType,
+    public ForumAclRuleEntity(Long forumId, Long categoryId, String role, SubjectType subjectType,
                               IdentifierType identifierType, Long subjectId, String subjectName,
                               PermissionAction action, Effect effect, Ownership ownership, int priority,
                               boolean enabled, Long createdById, OffsetDateTime createdAt, Long updatedById,
                               OffsetDateTime updatedAt) {
-        this.boardId = boardId;
+        this.forumId = forumId;
         this.categoryId = categoryId;
         this.role = role;
         this.subjectType = subjectType;
@@ -98,8 +98,12 @@ public class ForumAclRuleEntity {
         return ruleId;
     }
 
+    public Long getForumId() {
+        return forumId;
+    }
+
     public Long getBoardId() {
-        return boardId;
+        return forumId;
     }
 
     public Long getCategoryId() {

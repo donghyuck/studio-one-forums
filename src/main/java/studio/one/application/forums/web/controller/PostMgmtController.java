@@ -17,6 +17,7 @@ import studio.one.application.forums.service.post.command.DeletePostCommand;
 import studio.one.application.forums.service.post.command.HidePostCommand;
 import studio.one.application.forums.web.dto.PostDtos;
 import studio.one.application.forums.web.mapper.PostMapper;
+import studio.one.application.forums.web.etag.EtagUtil;
 import studio.one.platform.web.dto.ApiResponse;
 
 /**
@@ -29,11 +30,11 @@ import studio.one.platform.web.dto.ApiResponse;
  */
 @RestController
 @RequestMapping("${studio.features.forums.web.mgmt-base-path:/api/mgmt/forums}/{forumSlug}/topics/{topicId}/posts")
-public class PostAdminController {
+public class PostMgmtController {
     private final PostCommandService postCommandService;
     private final PostMapper postMapper = new PostMapper();
 
-    public PostAdminController(PostCommandService postCommandService) {
+    public PostMgmtController(PostCommandService postCommandService) {
         this.postCommandService = postCommandService;
     }
 
@@ -58,12 +59,12 @@ public class PostAdminController {
                                                                      @PathVariable Long topicId,
                                                                      @PathVariable Long postId,
                                                                      @RequestBody PostDtos.HidePostRequest request,
-                                                                     @RequestHeader("If-Match") String ifMatch,
+                                                                     @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                                                      @AuthenticationPrincipal(expression = "userId") Long userId,
                                                                      @AuthenticationPrincipal(expression = "username") String username) {
         Long updatedById = requireUserId(userId);
         String updatedBy = requireUsername(username);
-        long expectedVersion = parseIfMatchVersion(ifMatch);
+        long expectedVersion = EtagUtil.parseIfMatchVersion(ifMatch);
         postCommandService.hidePost(new HidePostCommand(postId, request.isHidden(), request.getReason(),
             updatedById, updatedBy, expectedVersion));
         return ResponseEntity.ok(ApiResponse.ok(Map.of("postId", postId, "hidden", request.isHidden())));
@@ -74,19 +75,14 @@ public class PostAdminController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> deletePost(@PathVariable String forumSlug,
                                                                        @PathVariable Long topicId,
                                                                        @PathVariable Long postId,
-                                                                       @RequestHeader("If-Match") String ifMatch,
+                                                                       @RequestHeader(value = "If-Match", required = false) String ifMatch,
                                                                        @AuthenticationPrincipal(expression = "userId") Long userId,
                                                                        @AuthenticationPrincipal(expression = "username") String username) {
         Long deletedById = requireUserId(userId);
         String deletedBy = requireUsername(username);
-        long expectedVersion = parseIfMatchVersion(ifMatch);
+        long expectedVersion = EtagUtil.parseIfMatchVersion(ifMatch);
         postCommandService.deletePost(new DeletePostCommand(postId, deletedById, deletedBy, expectedVersion));
         return ResponseEntity.ok(ApiResponse.ok(Map.of("postId", postId, "deleted", true)));
-    }
-
-    private long parseIfMatchVersion(String ifMatch) {
-        String token = ifMatch.replace("W/", "").replace("\"", "").trim();
-        return Long.parseLong(token);
     }
 
     private Long requireUserId(Long userId) {

@@ -114,6 +114,30 @@ public class ForumRepositoryAdapter implements ForumRepository {
             .collect(java.util.stream.Collectors.toList());
     }
 
+    @Override
+    public Page<Forum> searchCandidatesPage(String query, Set<String> inFields, boolean isAdmin,
+                                            boolean isMember, boolean secretListVisible, Long userId, Pageable pageable) {
+        Set<String> fields = normalizeInFields(inFields);
+        boolean hasSearch = query != null && !query.isBlank() && !fields.isEmpty();
+        String like = hasSearch ? "%" + query.toLowerCase() + "%" : null;
+        Specification<ForumEntity> spec = (root, criteria, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (hasSearch) {
+                List<Predicate> searchPredicates = new ArrayList<>();
+                for (String field : fields) {
+                    searchPredicates.add(cb.like(cb.lower(root.get(field)), like));
+                }
+                predicates.add(cb.or(searchPredicates.toArray(new Predicate[0])));
+            }
+            if (!isAdmin) {
+                Predicate visibility = buildVisibilityPredicate(root, criteria, cb, isMember, secretListVisible, userId);
+                predicates.add(visibility);
+            }
+            return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return forumJpaRepository.findAll(spec, pageable).map(this::toDomain);
+    }
+
     private Predicate buildVisibilityPredicate(javax.persistence.criteria.Root<ForumEntity> root,
                                                javax.persistence.criteria.CriteriaQuery<?> query,
                                                javax.persistence.criteria.CriteriaBuilder cb,

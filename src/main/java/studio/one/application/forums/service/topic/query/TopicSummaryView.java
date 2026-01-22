@@ -20,4 +20,13 @@ public class TopicSummaryView {
     private final String title;
     private final String status;
     private final OffsetDateTime updatedAt;
+    private final Long createdById;
+    private final String createdBy;
+    private final long postCount;
+    private final OffsetDateTime lastPostUpdatedAt;
+    private final Long lastPostUpdatedById;
+    private final String lastPostUpdatedBy;
+    private final Long lastPostId;
+    private final OffsetDateTime lastActivityAt;
+    private final String excerpt;
 }

@@ -3,6 +3,7 @@ package studio.one.application.forums.web.mapper;
 import studio.one.application.forums.domain.type.TopicStatus;
 import studio.one.application.forums.service.topic.command.ChangeTopicStatusCommand;
 import studio.one.application.forums.service.topic.command.CreateTopicCommand;
+import studio.one.application.forums.service.topic.command.UpdateTopicCommand;
 import studio.one.application.forums.service.topic.query.TopicDetailView;
 import studio.one.application.forums.service.topic.query.TopicSummaryView;
 import studio.one.application.forums.web.dto.TopicDtos;
@@ -41,6 +42,19 @@ public class TopicMapper {
         );
     }
 
+    public UpdateTopicCommand toUpdateCommand(String forumSlug, Long topicId, TopicDtos.UpdateTopicRequest request,
+                                              Long updatedById, String updatedBy, long version) {
+        return new UpdateTopicCommand(
+            forumSlug,
+            topicId,
+            request.getTitle(),
+            request.getTags(),
+            updatedById,
+            updatedBy,
+            version
+        );
+    }
+
     public TopicDtos.TopicResponse toResponse(TopicDetailView view) {
         TopicDtos.TopicResponse response = new TopicDtos.TopicResponse();
         response.setId(view.getId());
@@ -58,6 +72,15 @@ public class TopicMapper {
         response.setTitle(view.getTitle());
         response.setStatus(view.getStatus());
         response.setUpdatedAt(view.getUpdatedAt());
+        response.setCreatedById(view.getCreatedById());
+        response.setCreatedBy(view.getCreatedBy());
+        response.setPostCount(view.getPostCount());
+        response.setLastPostUpdatedAt(view.getLastPostUpdatedAt());
+        response.setLastPostUpdatedById(view.getLastPostUpdatedById());
+        response.setLastPostUpdatedBy(view.getLastPostUpdatedBy());
+        response.setLastPostId(view.getLastPostId());
+        response.setLastActivityAt(view.getLastActivityAt());
+        response.setExcerpt(view.getExcerpt());
         return response;
     }
 }

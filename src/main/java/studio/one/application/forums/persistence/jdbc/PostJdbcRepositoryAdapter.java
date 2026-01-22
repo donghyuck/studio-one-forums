@@ -90,8 +90,18 @@ public class PostJdbcRepositoryAdapter implements PostRepository {
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(postInsertSql, params, keyHolder);
-        Number key = keyHolder.getKey();
-        Long id = key != null ? key.longValue() : null;
+        Long id = null;
+        Map<String, Object> keys = keyHolder.getKeys();
+        if (keys != null) {
+            Object value = keys.get("id");
+            if (value instanceof Number) {
+                id = ((Number) value).longValue();
+            }
+        }
+        if (id == null) {
+            Number key = keyHolder.getKey();
+            id = key != null ? key.longValue() : null;
+        }
         return new Post(
             id,
             post.topicId(),

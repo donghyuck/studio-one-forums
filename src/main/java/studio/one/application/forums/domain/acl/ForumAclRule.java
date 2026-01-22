@@ -10,7 +10,7 @@ import lombok.experimental.Accessors;
 @Accessors(fluent = true)
 public class ForumAclRule {
     private final Long ruleId;
-    private final Long boardId;
+    private final Long forumId;
     private final Long categoryId;
     private final SubjectType subjectType;
     private final IdentifierType identifierType;

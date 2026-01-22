@@ -14,5 +14,7 @@ import org.springframework.data.domain.Pageable;
  */
 public interface TopicQueryRepository {
     List<TopicListRow> findTopics(Long forumId, String query, Set<String> inFields, Set<String> fields,
-                                  Pageable pageable, boolean includeDeleted);
+                                  Pageable pageable, boolean includeDeleted, boolean includeHiddenPosts);
+
+    long countTopics(Long forumId, String query, Set<String> inFields, boolean includeDeleted);
 }

@@ -2,7 +2,7 @@
 <sqlset name="forums" namespace="forums" description="Forums SQLs">
     <sql id="topicList">
         <dynamic><![CDATA[
-        select ${selectClause}
+        select ${selectClause!"t.id as topic_id, t.title, t.status, t.updated_at"}
         from tb_application_topics t
         where t.forum_id = :forumId
         <#if includeDeleted?? && includeDeleted == false>
@@ -15,6 +15,19 @@
         ${orderClause}
         </#if>
         limit :limit offset :offset
+        ]]></dynamic>
+    </sql>
+    <sql id="topicCount">
+        <dynamic><![CDATA[
+        select count(1)
+        from tb_application_topics t
+        where t.forum_id = :forumId
+        <#if includeDeleted?? && includeDeleted == false>
+        and t.deleted_at is null
+        </#if>
+        <#if searchClause?? && searchClause?length gt 0>
+        ${searchClause}
+        </#if>
         ]]></dynamic>
     </sql>
     <sql id="forumInsert">

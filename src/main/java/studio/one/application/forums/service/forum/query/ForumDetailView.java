@@ -1,9 +1,11 @@
 package studio.one.application.forums.service.forum.query;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import studio.one.application.forums.domain.type.ForumViewType;
 
 /**
  * Forums 조회 모델.
@@ -20,6 +22,8 @@ public class ForumDetailView {
     private final String slug;
     private final String name;
     private final String description;
+    private final ForumViewType viewType;
+    private final Map<String, String> properties;
     private final OffsetDateTime updatedAt;
     private final long version;
 }

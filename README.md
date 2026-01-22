@@ -14,47 +14,64 @@ Discourse 스타일의 포럼(Forums) 모듈입니다. 멀티 포럼/카테고�
   - sql: SqlQuery SQLSet
   - i18n: 포럼 모듈 메시지
 
+## 컨트롤러 네이밍 규칙
+- 관리자 전용: `*MgmtController`
+- 일반 사용자용: `*Controller`
+- 공개(인증 없음): `*PublicController`
+- 본인 전용: `*MeController`
+
 ## 주요 기능
 - Forum: 생성/목록/상세/설정 변경
 - Category: 생성/목록
-- Topic: 생성/목록/상세/상태변경
-- Post: 생성/목록
+- Topic: 생성/목록/상세/수정/삭제/상태변경
+- Post: 생성/목록/수정/삭제
 - Membership: 게시판별 관리자/운영진/회원 관리
 
 ## 권한별 작업
 Public (사용자)
 - Forum: 목록/상세 조회 (게시판 타입/정책에 따라 제한)
 - Category: 목록 조회
-- Topic: 목록/상세 조회 (READ_LIST vs READ_CONTENT 분리)
-- Post: 목록 조회
+- Topic: 생성/목록/상세/수정/삭제 (권한 기반)
+- Post: 생성/목록/수정/삭제 (권한 기반)
 
 Admin (관리자)
 - Forum: 생성, 설정 변경
 - Category: 생성
-- Topic: 생성, 상태 변경
-- Post: 생성
+- Topic: 생성/수정/삭제/상태 변경/핀/락
+- Post: 생성/수정/삭제/숨김
 - Membership: 게시판별 멤버/역할 관리
+
+## 응답 포맷
+- 사용자/관리자 모두 `ApiResponse`로 응답하며, 동일한 작업은 동일한 payload 구조를 사용합니다.
+- Forum 응답에는 `viewType`(UI/콘텐츠 모드)과 whitelist된 `properties`만 노출됩니다.
+- Forum 목록 응답에도 `viewType`이 포함됩니다.
 
 ## API
 Public
-- POST `/api/forums`
 - GET `/api/forums?q=&in=slug,name,description&page=&size=&sort=`
 - GET `/api/forums/{forumSlug}` (ETag)
-- PUT `/api/forums/{forumSlug}/settings` (If-Match)
-- POST `/api/forums/{forumSlug}/categories`
 - GET `/api/forums/{forumSlug}/categories`
 - POST `/api/forums/{forumSlug}/categories/{categoryId}/topics`
+- POST `/api/forums/{forumSlug}/topics`
 - GET `/api/forums/{forumSlug}/topics?q=&in=title,tags&fields=...&page=&size=&sort=`
+- GET `/api/forums/{forumSlug}/topics?q=&in=title,tags&fields=...&page=&size=&sort=` (TopicSummary 확장 필드 포함)
 - GET `/api/forums/{forumSlug}/topics/{topicId}` (ETag)
-- PATCH `/api/forums/{forumSlug}/topics/{topicId}/status` (If-Match)
+- PATCH `/api/forums/{forumSlug}/topics/{topicId}` (If-Match)
+- DELETE `/api/forums/{forumSlug}/topics/{topicId}` (If-Match)
 - POST `/api/forums/{forumSlug}/topics/{topicId}/posts`
 - GET `/api/forums/{forumSlug}/topics/{topicId}/posts?page=&size=&sort=`
+- PATCH `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}` (If-Match)
+- DELETE `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}` (If-Match)
 
 Admin
+- GET `/api/mgmt/forums?q=&in=slug,name,description&page=&size=&sort=`
+- GET `/api/mgmt/forums/{forumSlug}` (ETag)
 - POST `/api/mgmt/forums`
 - PUT `/api/mgmt/forums/{forumSlug}/settings` (If-Match)
 - POST `/api/mgmt/forums/{forumSlug}/categories`
+- DELETE `/api/mgmt/forums/{forumSlug}/categories/{categoryId}`
 - POST `/api/mgmt/forums/{forumSlug}/categories/{categoryId}/topics`
+- GET `/api/mgmt/forums/{forumSlug}/topics?includeHidden=false&q=&in=title,tags&fields=...&page=&size=&sort=`
 - PATCH `/api/mgmt/forums/{forumSlug}/topics/{topicId}/status` (If-Match)
 - PATCH `/api/mgmt/forums/{forumSlug}/topics/{topicId}/pin` (If-Match)
 - PATCH `/api/mgmt/forums/{forumSlug}/topics/{topicId}/lock` (If-Match)
@@ -73,12 +90,136 @@ Admin
 ## 검색 파라미터
 - `q`: 검색어
 - `in`: 검색 대상 필드 목록 (예: `title,tags`)
-- `fields`: 응답 필드 선택 (예: `topicId,title,updatedAt`)
+- `fields`: 응답 필드 선택 (예: `topicId,title,updatedAt,postCount,lastActivityAt`)
 - `page`, `size`, `sort`
 
-## 동시성 제어
-- 조회 응답에 ETag 반환
-- 수정/상태변경 요청은 If-Match 필요
+## TopicSummaryResponse 확장 필드
+- `createdById`, `createdBy`
+- `postCount`
+- `lastPostUpdatedAt`
+- `lastPostUpdatedById`, `lastPostUpdatedBy`
+- `lastPostId`
+- `lastActivityAt` (댓글이 있으면 마지막 댓글 수정일, 없으면 토픽 updatedAt)
+- `excerpt` (마지막 댓글 내용 200자 요약)
+
+## 목록 정렬 기본값
+- Topic 목록 기본 정렬: `lastActivityAt desc, topicId desc`
+
+## 관리자 목록 옵션
+- `includeHidden`: 숨김 댓글 포함 여부 (기본값 `false`)
+
+## 정렬 가능한 Topic 목록 필드
+- `updatedAt`
+- `postCount`
+- `lastPostUpdatedAt`
+- `lastPostUpdatedById`
+- `lastPostId`
+- `lastActivityAt`
+
+## Topic 목록 응답 예시
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 101,
+        "title": "첫 번째 토픽",
+        "status": "OPEN",
+        "updatedAt": "2026-01-20T10:15:30+09:00",
+        "createdById": 7,
+        "createdBy": "alice",
+        "postCount": 5,
+        "lastPostUpdatedAt": "2026-01-22T09:40:10+09:00",
+        "lastPostUpdatedById": 12,
+        "lastPostUpdatedBy": "bob",
+        "lastPostId": 5501,
+        "lastActivityAt": "2026-01-22T09:40:10+09:00",
+        "excerpt": "마지막 댓글 요약 내용..."
+      }
+    ],
+    "pageable": {
+      "pageNumber": 0,
+      "pageSize": 20
+    },
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
+
+## Forum 목록 응답 예시
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "slug": "general",
+        "name": "General",
+        "viewType": "GENERAL",
+        "updatedAt": "2026-01-22T08:10:00+09:00",
+        "topicCount": 12,
+        "postCount": 58,
+        "lastActivityAt": "2026-01-22T09:40:10+09:00",
+        "lastActivityById": 12,
+        "lastActivityBy": "bob",
+        "lastActivityType": "POST",
+        "lastActivityId": 5501
+      }
+    ],
+    "pageable": {
+      "pageNumber": 0,
+      "pageSize": 20
+    },
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
+
+## 동시성 제어 (ETag/If-Match)
+- 조회 응답에 ETag(`W/"{version}"`) 반환
+- 수정/상태변경 요청은 `If-Match` 필요
+- `If-Match` 누락: 428 Precondition Required
+- `If-Match` 유효하지 않음: 412 Precondition Failed
+
+## If-Match 오류 응답 예시
+```json
+{
+  "success": false,
+  "error": {
+    "code": "error.http.precondition.required",
+    "message": "If-Match header is required"
+  }
+}
+```
+```json
+{
+  "success": false,
+  "error": {
+    "code": "error.http.precondition.failed",
+    "message": "Invalid If-Match header"
+  }
+}
+```
+
+## Forum viewType/properties
+- `viewType`: `GENERAL | GALLERY | VIDEO | LIBRARY | NOTICE` (기본값 `GENERAL`)
+- 저장/응답 properties는 whitelist 키만 허용/노출
+  - `viewType`
+  - `media.allowedExt`
+  - `library.maxFileMb`
+
+## Forum properties 검증 실패 예시
+```json
+{
+  "success": false,
+  "error": {
+    "message": "unknown forum properties: someKey"
+  }
+}
+```
 
 ## 데이터 필드
 - createdById, createdBy, createdAt
@@ -131,8 +272,11 @@ features.forums.persistence=jdbc
 | `studio.features.forums.cache.detail-ttl` | forums 상세 캐시 TTL | `5m` |
 | `studio.features.forums.cache.list-max-size` | forums 목록 캐시 최대 항목 수 | `10000` |
 | `studio.features.forums.cache.detail-max-size` | forums 상세 캐시 최대 항목 수 | `50000` |
+| `studio.features.forums.cache.record-stats` | forums 캐시 통계 수집 | `true` |
 | `studio.features.forums.authz.admin-roles` | 관리자 역할 목록 (쉼표 구분) | `ROLE_ADMIN,ADMIN` |
 | `studio.features.forums.authz.secret-list-visible` | SECRET 게시판 목록 노출 여부 | `false` |
+| `features.forums.persistence` | persistence 선택 (`jpa` or `jdbc`) | 글로벌 기본값 |
+| `features.forums.entity-packages` | JPA 엔티티 스캔 패키지 | `studio.one.application.forums.persistence.jpa.entity` |
 
 ## 게시판 타입 정책
 - COMMON: 누구나 읽기, 회원 쓰기
@@ -140,13 +284,31 @@ features.forums.persistence=jdbc
 - SECRET: 본문은 작성자/관리자만, 목록 노출은 설정으로 제어
 - ADMIN_ONLY: 관리자/운영진만 목록/본문 접근
 
+## 권한 매트릭스 (요약)
+| ForumType | Actor | READ_BOARD | READ_TOPIC | CREATE_TOPIC | EDIT_TOPIC | DELETE_TOPIC | REPLY_POST | EDIT_POST | DELETE_POST |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| COMMON | anonymous | Y | Y | N | N | N | N | N | N |
+| COMMON | member | Y | Y | Y | Y* | Y* | Y | Y* | Y* |
+| COMMON | admin | Y | Y | Y | Y | Y | Y | Y | Y |
+| NOTICE | anonymous | Y | Y | N | N | N | N | N | N |
+| NOTICE | member | Y | Y | N | N | N | N | N | N |
+| NOTICE | admin | Y | Y | Y | Y | Y | Y | Y | Y |
+| SECRET | anonymous | N | N | N | N | N | N | N | N |
+| SECRET | member | Y** | Y** | Y | Y* | Y* | Y | Y* | Y* |
+| SECRET | admin | Y | Y | Y | Y | Y | Y | Y | Y |
+| ADMIN_ONLY | anonymous | N | N | N | N | N | N | N | N |
+| ADMIN_ONLY | member | N | N | N | N | N | N | N | N |
+| ADMIN_ONLY | admin | Y | Y | Y | Y | Y | Y | Y | Y |
+*작성자/관리자만 허용, **작성자/관리자 및 멤버십/설정에 따라 목록 노출
+
+## 상태 변경/숨김 옵션
+- Topic 관리: `status`, `pin`, `lock` (관리자)
+- Post 관리: `hide` (관리자)
+
 ## 게시판별 멤버십
 - 테이블: `tb_application_forum_member`
 - 역할: `OWNER`, `ADMIN`, `MODERATOR`, `MEMBER`
 - 권한 계산: 글로벌 роли + 게시판별 멤버십을 합쳐서 평가
-| `studio.features.forums.cache.record-stats` | forums 캐시 통계 수집 | `true` |
-| `features.forums.persistence` | persistence 선택 (`jpa` or `jdbc`) | 글로벌 기본값 |
-| `features.forums.entity-packages` | JPA 엔티티 스캔 패키지 | `studio.one.application.forums.persistence.jpa.entity` |
 
 ## 캐시 키
 - `forums.list`

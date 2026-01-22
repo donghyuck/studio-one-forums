@@ -1,5 +1,6 @@
 package studio.one.application.forums.service.forum.command;
 
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -19,6 +20,8 @@ public class UpdateForumSettingsCommand {
     private final String slug;
     private final String name;
     private final String description;
+    private final String viewType;
+    private final Map<String, String> properties;
     private final Long updatedById;
     private final String updatedBy;
     private final long expectedVersion;

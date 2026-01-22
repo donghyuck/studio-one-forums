@@ -22,6 +22,12 @@ public class PostDtos {
 
     @Getter
     @Setter
+    public static class UpdatePostRequest {
+        private String content;
+    }
+
+    @Getter
+    @Setter
     public static class HidePostRequest {
         private boolean hidden;
         private String reason;

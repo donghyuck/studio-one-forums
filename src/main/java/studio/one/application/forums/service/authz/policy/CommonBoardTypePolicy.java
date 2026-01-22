@@ -1,9 +1,17 @@
 package studio.one.application.forums.service.authz.policy;
 
+import org.springframework.stereotype.Component;
 import studio.one.application.forums.domain.acl.PermissionAction;
+import studio.one.application.forums.domain.type.ForumType;
 import studio.one.application.forums.service.authz.PolicyDecision;
 
-public class CommonBoardTypePolicy implements BoardTypePolicy {
+@Component
+public class CommonBoardTypePolicy implements ForumTypePolicy {
+    @Override
+    public ForumType type() {
+        return ForumType.COMMON;
+    }
+
     @Override
     public PolicyDecision decide(PermissionAction action, boolean isMember, boolean isAdmin, boolean isOwner, boolean isLocked) {
         if (isAdmin) {

@@ -2,8 +2,12 @@ package studio.one.application.forums.service.audit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.Locale;
 import java.util.Map;
+import javax.sql.DataSource;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -19,9 +23,16 @@ public class ForumAuditLogService {
         values
             (:boardId, :entityType, :entityId, :action, :actorId, :at, :detail)
         """;
+    private static final String INSERT_SQL_POSTGRES = """
+        insert into tb_forum_audit_log
+            (board_id, entity_type, entity_id, action, actor_id, at, detail)
+        values
+            (:boardId, :entityType, :entityId, :action, :actorId, :at, cast(:detail as jsonb))
+        """;
 
     private final ObjectProvider<NamedParameterJdbcTemplate> jdbcTemplateProvider;
     private final ObjectProvider<ObjectMapper> objectMapperProvider;
+    private volatile Boolean postgres;
 
     public ForumAuditLogService(ObjectProvider<NamedParameterJdbcTemplate> jdbcTemplateProvider,
                                 ObjectProvider<ObjectMapper> objectMapperProvider) {
@@ -29,17 +40,18 @@ public class ForumAuditLogService {
         this.objectMapperProvider = objectMapperProvider;
     }
 
-    public void record(Long boardId, String entityType, Long entityId, String action,
+    public void record(Long forumId, String entityType, Long entityId, String action,
                        Long actorId, Map<String, Object> detail) {
         NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplateProvider.getIfAvailable();
         if (jdbcTemplate == null) {
             return;
         }
         String detailPayload = serializeDetail(detail);
+        String insertSql = isPostgres(jdbcTemplate) ? INSERT_SQL_POSTGRES : INSERT_SQL;
         Runnable insert = () -> jdbcTemplate.update(
-            INSERT_SQL,
+            insertSql,
             new MapSqlParameterSource()
-                .addValue("boardId", boardId)
+                .addValue("boardId", forumId)
                 .addValue("entityType", entityType)
                 .addValue("entityId", entityId)
                 .addValue("action", action)
@@ -57,6 +69,27 @@ public class ForumAuditLogService {
         } else {
             insert.run();
         }
+    }
+
+    private boolean isPostgres(NamedParameterJdbcTemplate jdbcTemplate) {
+        Boolean cached = postgres;
+        if (cached != null) {
+            return cached;
+        }
+        boolean detected = false;
+        DataSource dataSource = jdbcTemplate.getJdbcTemplate().getDataSource();
+        if (dataSource != null) {
+            try (Connection connection = dataSource.getConnection()) {
+                String productName = connection.getMetaData().getDatabaseProductName();
+                if (productName != null) {
+                    detected = productName.toLowerCase(Locale.ROOT).contains("postgres");
+                }
+            } catch (SQLException ignored) {
+                detected = false;
+            }
+        }
+        postgres = detected;
+        return detected;
     }
 
     private String serializeDetail(Map<String, Object> detail) {

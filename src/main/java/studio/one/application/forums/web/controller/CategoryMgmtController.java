@@ -25,16 +25,16 @@ import studio.one.platform.web.dto.ApiResponse;
  */
 @RestController
 @RequestMapping("${studio.features.forums.web.mgmt-base-path:/api/mgmt/forums}/{forumSlug}/categories")
-public class CategoryAdminController {
+public class CategoryMgmtController {
     private final CategoryCommandService categoryCommandService;
     private final CategoryMapper categoryMapper = new CategoryMapper();
 
-    public CategoryAdminController(CategoryCommandService categoryCommandService) {
+    public CategoryMgmtController(CategoryCommandService categoryCommandService) {
         this.categoryCommandService = categoryCommandService;
     }
 
     @PostMapping
-    @PreAuthorize("@forumAuthz.canBoard(#forumSlug, 'MODERATE')")
+    @PreAuthorize("@forumAuthz.canForum(#forumSlug, 'MODERATE')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createCategory(
         @PathVariable String forumSlug,
         @RequestBody CategoryDtos.CreateCategoryRequest request,

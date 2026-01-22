@@ -58,6 +58,14 @@ public class Topic {
         this.updatedAt = updatedAt;
     }
 
+    public void updateContent(String title, List<String> tags, Long updatedById, String updatedBy, OffsetDateTime updatedAt) {
+        this.title = title;
+        this.tags = tags;
+        this.updatedById = updatedById;
+        this.updatedBy = updatedBy;
+        this.updatedAt = updatedAt;
+    }
+
     public void softDelete(Long deletedById, OffsetDateTime deletedAt) {
         this.deletedById = deletedById;
         this.deletedAt = deletedAt;

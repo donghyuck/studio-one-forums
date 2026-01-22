@@ -15,12 +15,33 @@ public class TopicListRow {
     private final String title;
     private final String status;
     private final OffsetDateTime updatedAt;
+    private final Long createdById;
+    private final String createdBy;
+    private final long postCount;
+    private final OffsetDateTime lastPostUpdatedAt;
+    private final Long lastPostUpdatedById;
+    private final String lastPostUpdatedBy;
+    private final Long lastPostId;
+    private final OffsetDateTime lastActivityAt;
+    private final String excerpt;
 
-    public TopicListRow(Long topicId, String title, String status, OffsetDateTime updatedAt) {
+    public TopicListRow(Long topicId, String title, String status, OffsetDateTime updatedAt,
+                        Long createdById, String createdBy, long postCount,
+                        OffsetDateTime lastPostUpdatedAt, Long lastPostUpdatedById, String lastPostUpdatedBy,
+                        Long lastPostId, OffsetDateTime lastActivityAt, String excerpt) {
         this.topicId = topicId;
         this.title = title;
         this.status = status;
         this.updatedAt = updatedAt;
+        this.createdById = createdById;
+        this.createdBy = createdBy;
+        this.postCount = postCount;
+        this.lastPostUpdatedAt = lastPostUpdatedAt;
+        this.lastPostUpdatedById = lastPostUpdatedById;
+        this.lastPostUpdatedBy = lastPostUpdatedBy;
+        this.lastPostId = lastPostId;
+        this.lastActivityAt = lastActivityAt;
+        this.excerpt = excerpt;
     }
 
     public Long getTopicId() {
@@ -37,5 +58,41 @@ public class TopicListRow {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Long getCreatedById() {
+        return createdById;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public long getPostCount() {
+        return postCount;
+    }
+
+    public OffsetDateTime getLastPostUpdatedAt() {
+        return lastPostUpdatedAt;
+    }
+
+    public Long getLastPostUpdatedById() {
+        return lastPostUpdatedById;
+    }
+
+    public String getLastPostUpdatedBy() {
+        return lastPostUpdatedBy;
+    }
+
+    public Long getLastPostId() {
+        return lastPostId;
+    }
+
+    public OffsetDateTime getLastActivityAt() {
+        return lastActivityAt;
+    }
+
+    public String getExcerpt() {
+        return excerpt;
     }
 }

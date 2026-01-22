@@ -1,6 +1,7 @@
 package studio.one.application.forums.service.forum;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.cache.annotation.Cacheable;
@@ -10,8 +11,11 @@ import org.springframework.stereotype.Service;
 import studio.one.application.forums.constant.CacheNames;
 import studio.one.application.forums.domain.exception.ForumNotFoundException;
 import studio.one.application.forums.domain.model.Forum;
+import studio.one.application.forums.domain.property.ForumProperties;
 import studio.one.application.forums.domain.repository.ForumRepository;
 import studio.one.application.forums.domain.vo.ForumSlug;
+import studio.one.application.forums.persistence.jdbc.ForumQueryRepository;
+import studio.one.application.forums.persistence.jdbc.ForumSummaryMetricsRow;
 import studio.one.application.forums.service.forum.query.ForumDetailView;
 import studio.one.application.forums.service.forum.query.ForumSummaryView;
 
@@ -26,9 +30,11 @@ import studio.one.application.forums.service.forum.query.ForumSummaryView;
 @Service
 public class ForumQueryService {
     private final ForumRepository forumRepository;
+    private final ForumQueryRepository forumQueryRepository;
 
-    public ForumQueryService(ForumRepository forumRepository) {
+    public ForumQueryService(ForumRepository forumRepository, ForumQueryRepository forumQueryRepository) {
         this.forumRepository = forumRepository;
+        this.forumQueryRepository = forumQueryRepository;
     }
 
     @Cacheable(cacheNames = CacheNames.Forum.BY_SLUG,
@@ -43,6 +49,8 @@ public class ForumQueryService {
             forum.slug().value(),
             forum.name(),
             forum.description(),
+            ForumProperties.readViewType(forum.properties()),
+            forum.properties(),
             forum.updatedAt(),
             forum.version()
         );
@@ -52,14 +60,69 @@ public class ForumQueryService {
                key = "new org.springframework.cache.interceptor.SimpleKey(#query, #inFields, #pageable)",
                condition = "@environment.getProperty('studio.features.forums.cache.enabled','true') == 'true'")
     public Page<ForumSummaryView> listForums(String query, Set<String> inFields, Pageable pageable) {
+        return listForums(query, inFields, pageable, false);
+    }
+
+    public Page<ForumSummaryView> listForums(String query, Set<String> inFields, Pageable pageable,
+                                             boolean includeHiddenPosts) {
         Page<Forum> page = forumRepository.search(query, normalizeInFields(inFields), pageable);
-        return page.map(forum -> new ForumSummaryView(forum.slug().value(), forum.name(), forum.updatedAt()));
+        Map<Long, ForumSummaryMetricsRow> metrics = forumQueryRepository.findForumSummaries(
+            page.getContent().stream().map(Forum::id).toList(),
+            includeHiddenPosts
+        );
+        return page.map(forum -> toSummaryView(forum, metrics.get(forum.id())));
     }
 
     public List<Forum> listForumCandidates(String query, Set<String> inFields, boolean isAdmin,
                                            boolean isMember, boolean secretListVisible, Long userId) {
         return forumRepository.searchCandidates(query, normalizeInFields(inFields),
             isAdmin, isMember, secretListVisible, userId);
+    }
+
+    public Page<Forum> listForumCandidatesPage(String query, Set<String> inFields, boolean isAdmin,
+                                               boolean isMember, boolean secretListVisible, Long userId, Pageable pageable) {
+        return forumRepository.searchCandidatesPage(query, normalizeInFields(inFields),
+            isAdmin, isMember, secretListVisible, userId, pageable);
+    }
+
+    public List<ForumSummaryView> summarizeForums(List<Forum> forums) {
+        return summarizeForums(forums, false);
+    }
+
+    public List<ForumSummaryView> summarizeForums(List<Forum> forums, boolean includeHiddenPosts) {
+        if (forums == null || forums.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, ForumSummaryMetricsRow> metrics = forumQueryRepository.findForumSummaries(
+            forums.stream().map(Forum::id).toList(),
+            includeHiddenPosts
+        );
+        return forums.stream()
+            .map(forum -> toSummaryView(forum, metrics.get(forum.id())))
+            .toList();
+    }
+
+    private ForumSummaryView toSummaryView(Forum forum, ForumSummaryMetricsRow metrics) {
+        long topicCount = metrics != null ? metrics.getTopicCount() : 0L;
+        long postCount = metrics != null ? metrics.getPostCount() : 0L;
+        java.time.OffsetDateTime lastActivityAt = metrics != null ? metrics.getLastActivityAt() : null;
+        Long lastActivityById = metrics != null ? metrics.getLastActivityById() : null;
+        String lastActivityBy = metrics != null ? metrics.getLastActivityBy() : null;
+        String lastActivityType = metrics != null ? metrics.getLastActivityType() : null;
+        Long lastActivityId = metrics != null ? metrics.getLastActivityId() : null;
+        return new ForumSummaryView(
+            forum.slug().value(),
+            forum.name(),
+            ForumProperties.readViewType(forum.properties()),
+            forum.updatedAt(),
+            topicCount,
+            postCount,
+            lastActivityAt,
+            lastActivityById,
+            lastActivityBy,
+            lastActivityType,
+            lastActivityId
+        );
     }
 
     private Set<String> normalizeInFields(Set<String> inFields) {
