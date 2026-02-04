@@ -21,6 +21,7 @@ public class ForumMapper {
             request.getSlug(),
             request.getName(),
             request.getDescription(),
+            request.getType(),
             request.getViewType(),
             request.getProperties(),
             createdById,
@@ -34,6 +35,7 @@ public class ForumMapper {
             slug,
             request.getName(),
             request.getDescription(),
+            request.getType(),
             request.getViewType(),
             request.getProperties(),
             updatedById,
@@ -48,6 +50,7 @@ public class ForumMapper {
         response.setSlug(view.getSlug());
         response.setName(view.getName());
         response.setDescription(view.getDescription());
+        response.setType(view.getType().name());
         response.setViewType(view.getViewType().name());
         response.setProperties(ForumProperties.filterAllowed(view.getProperties()));
         response.setUpdatedAt(view.getUpdatedAt());
@@ -58,6 +61,7 @@ public class ForumMapper {
         ForumDtos.ForumSummaryResponse response = new ForumDtos.ForumSummaryResponse();
         response.setSlug(view.getSlug());
         response.setName(view.getName());
+        response.setType(view.getType().name());
         response.setViewType(view.getViewType().name());
         response.setUpdatedAt(view.getUpdatedAt());
         response.setTopicCount(view.getTopicCount());

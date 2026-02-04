@@ -29,7 +29,7 @@ tasks.named<Jar>("jar") {
 dependencies {   
     // studio one
     compileOnly("studio.one.starter:studio-platform-starter:${property("studioOneVersion")}") 
-    
+    compileOnly("studio.one.modules:attachment-service:${property("studioOneVersion")}")  
     //compileOnly("studio.one.starter:studio-platform-starter-security:${property("studioOneVersion")}")
     // spring boot
     compileOnly("org.springframework.boot:spring-boot-starter-validation") 

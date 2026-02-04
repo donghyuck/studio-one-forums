@@ -5,11 +5,15 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import studio.one.application.forums.domain.acl.Effect;
 import studio.one.application.forums.domain.acl.IdentifierType;
 import studio.one.application.forums.domain.acl.ForumAclRule;
@@ -20,7 +24,45 @@ import studio.one.application.forums.domain.repository.ForumAclRuleRepository;
 
 @Repository
 public class ForumAclRuleJdbcRepositoryAdapter implements ForumAclRuleRepository {
+    
     private final NamedParameterJdbcTemplate jdbcTemplate;
+
+    private static final String INSERT_SQL = """
+            insert into tb_application_forum_acl_rule (board_id, category_id, role, subject_type,
+                    identifier_type, subject_id, subject_name, action, effect, ownership,
+                    priority, enabled, created_by_id, created_at, updated_by_id, updated_at)
+            values (:forumId, :categoryId, :role, :subjectType,
+                    :identifierType, :subjectId, :subjectName, :action, :effect, :ownership,
+                    :priority, :enabled, :createdById, :createdAt, :updatedById, :updatedAt)
+            """;
+
+    private static final String UPDATE_SQL = """
+            update tb_application_forum_acl_rule
+               set category_id = :categoryId,
+                   role = :role,
+                   subject_type = :subjectType,
+                   identifier_type = :identifierType,
+                   subject_id = :subjectId,
+                   subject_name = :subjectName,
+                   action = :action,
+                   effect = :effect,
+                   ownership = :ownership,
+                   priority = :priority,
+                   enabled = :enabled,
+                   updated_by_id = :updatedById,
+                   updated_at = :updatedAt
+             where rule_id = :ruleId
+            """;
+
+    private static final String DELETE_SQL = "delete from tb_application_forum_acl_rule where rule_id = :ruleId";
+
+    private static final String SELECT_BY_ID_SQL = """
+            select rule_id, board_id, category_id, role, subject_type, identifier_type, subject_id,
+                   subject_name, action, effect, ownership, priority, enabled,
+                   created_by_id, created_at, updated_by_id, updated_at
+              from tb_application_forum_acl_rule
+             where rule_id = :ruleId
+            """;
 
     public ForumAclRuleJdbcRepositoryAdapter(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -40,7 +82,7 @@ public class ForumAclRuleJdbcRepositoryAdapter implements ForumAclRuleRepository
             .append("select rule_id, board_id, category_id, role, subject_type, identifier_type, subject_id, ")
             .append("subject_name, action, effect, ownership, priority, enabled, ")
             .append("created_by_id, created_at, updated_by_id, updated_at ")
-            .append("from tb_forum_acl_rule ")
+            .append("from tb_application_forum_acl_rule ")
             .append("where board_id = :boardId ")
             .append("and action = :action ")
             .append("and enabled = true ")
@@ -89,7 +131,7 @@ public class ForumAclRuleJdbcRepositoryAdapter implements ForumAclRuleRepository
             .append("select rule_id, board_id, category_id, role, subject_type, identifier_type, subject_id, ")
             .append("subject_name, action, effect, ownership, priority, enabled, ")
             .append("created_by_id, created_at, updated_by_id, updated_at ")
-            .append("from tb_forum_acl_rule ")
+            .append("from tb_application_forum_acl_rule ")
             .append("where board_id in (:forumIds) ")
             .append("and action = :action ")
             .append("and enabled = true ")
@@ -122,6 +164,43 @@ public class ForumAclRuleJdbcRepositoryAdapter implements ForumAclRuleRepository
             params.addValue("categoryId", categoryId);
         }
         return jdbcTemplate.query(sql.toString(), params, forumAclRuleRowMapper);
+    }
+
+    @Override
+    public List<ForumAclRule> findByForumId(long forumId) {
+        String sql = """
+            select rule_id, board_id, category_id, role, subject_type, identifier_type, subject_id,
+                   subject_name, action, effect, ownership, priority, enabled,
+                   created_by_id, created_at, updated_by_id, updated_at
+              from tb_application_forum_acl_rule
+             where board_id = :boardId
+               and enabled = true
+             order by coalesce(category_id, 9223372036854775807), priority desc
+            """;
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("boardId", forumId);
+        return jdbcTemplate.query(sql, params, forumAclRuleRowMapper);
+    }
+
+    @Override
+    public Optional<ForumAclRule> findById(long ruleId) {
+        List<ForumAclRule> rows = jdbcTemplate.query(SELECT_BY_ID_SQL, Map.of("ruleId", ruleId), forumAclRuleRowMapper);
+        return rows.stream().findFirst();
+    }
+
+    @Override
+    public ForumAclRule save(ForumAclRule rule) {
+        if (rule.ruleId() == null) {
+            return insert(rule);
+        }
+        jdbcTemplate.update(UPDATE_SQL, toUpdateParams(rule));
+        return rule;
+    }
+
+    @Override
+    public void delete(ForumAclRule rule) {
+        if (rule.ruleId() != null) {
+            jdbcTemplate.update(DELETE_SQL, Map.of("ruleId", rule.ruleId()));
+        }
     }
 
     private final RowMapper<ForumAclRule> forumAclRuleRowMapper = new RowMapper<>() {
@@ -167,5 +246,72 @@ public class ForumAclRuleJdbcRepositoryAdapter implements ForumAclRuleRepository
             return IdentifierType.NAME;
         }
         return IdentifierType.valueOf(value);
+    }
+
+    private ForumAclRule insert(ForumAclRule rule) {
+        MapSqlParameterSource params = toInsertParams(rule);
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(INSERT_SQL, params, keyHolder, new String[] { "rule_id" });
+        Long ruleId = null;
+        if (keyHolder.getKey() != null) {
+            ruleId = keyHolder.getKey().longValue();
+        }
+        return new ForumAclRule(
+                ruleId,
+                rule.forumId(),
+                rule.categoryId(),
+                rule.subjectType(),
+                rule.identifierType(),
+                rule.subjectId(),
+                rule.subjectName(),
+                rule.role(),
+                rule.action(),
+                rule.effect(),
+                rule.ownership(),
+                rule.priority(),
+                rule.enabled(),
+                rule.createdById(),
+                rule.createdAt(),
+                rule.updatedById(),
+                rule.updatedAt()
+        );
+    }
+
+    private MapSqlParameterSource toInsertParams(ForumAclRule rule) {
+        return new MapSqlParameterSource()
+            .addValue("forumId", rule.forumId())
+            .addValue("categoryId", rule.categoryId())
+            .addValue("role", rule.role())
+            .addValue("subjectType", rule.subjectType() != null ? rule.subjectType().name() : null)
+            .addValue("identifierType", rule.identifierType() != null ? rule.identifierType().name() : null)
+            .addValue("subjectId", rule.subjectId())
+            .addValue("subjectName", rule.subjectName())
+            .addValue("action", rule.action() != null ? rule.action().name() : null)
+            .addValue("effect", rule.effect() != null ? rule.effect().name() : null)
+            .addValue("ownership", rule.ownership() != null ? rule.ownership().name() : null)
+            .addValue("priority", rule.priority())
+            .addValue("enabled", rule.enabled())
+            .addValue("createdById", rule.createdById())
+            .addValue("createdAt", rule.createdAt())
+            .addValue("updatedById", rule.updatedById())
+            .addValue("updatedAt", rule.updatedAt());
+    }
+
+    private MapSqlParameterSource toUpdateParams(ForumAclRule rule) {
+        return new MapSqlParameterSource()
+            .addValue("ruleId", rule.ruleId())
+            .addValue("categoryId", rule.categoryId())
+            .addValue("role", rule.role())
+            .addValue("subjectType", rule.subjectType() != null ? rule.subjectType().name() : null)
+            .addValue("identifierType", rule.identifierType() != null ? rule.identifierType().name() : null)
+            .addValue("subjectId", rule.subjectId())
+            .addValue("subjectName", rule.subjectName())
+            .addValue("action", rule.action() != null ? rule.action().name() : null)
+            .addValue("effect", rule.effect() != null ? rule.effect().name() : null)
+            .addValue("ownership", rule.ownership() != null ? rule.ownership().name() : null)
+            .addValue("priority", rule.priority())
+            .addValue("enabled", rule.enabled())
+            .addValue("updatedById", rule.updatedById())
+            .addValue("updatedAt", rule.updatedAt());
     }
 }

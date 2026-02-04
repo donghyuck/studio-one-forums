@@ -279,6 +279,32 @@ class ForumAuthorizationServiceTest {
                 .toList();
         }
 
+        @Override
+        public List<ForumAclRule> findByForumId(long forumId) {
+            return rules.stream()
+                .filter(rule -> rule.forumId().equals(forumId))
+                .toList();
+        }
+
+        @Override
+        public Optional<ForumAclRule> findById(long ruleId) {
+            return rules.stream()
+                .filter(rule -> rule.ruleId() != null && rule.ruleId().equals(ruleId))
+                .findFirst();
+        }
+
+        @Override
+        public ForumAclRule save(ForumAclRule rule) {
+            rules.removeIf(existing -> existing.ruleId() != null && rule.ruleId() != null && existing.ruleId().equals(rule.ruleId()));
+            rules.add(rule);
+            return rule;
+        }
+
+        @Override
+        public void delete(ForumAclRule rule) {
+            rules.removeIf(existing -> existing.ruleId() != null && rule.ruleId() != null && existing.ruleId().equals(rule.ruleId()));
+        }
+
         private boolean subjectMatches(ForumAclRule rule, Set<String> roleNames, Set<Long> roleIds,
                                        Long userId, String username) {
             SubjectType subjectType = rule.subjectType() != null ? rule.subjectType() : SubjectType.ROLE;

@@ -21,6 +21,7 @@ public class ForumDtos {
         private String slug;
         private String name;
         private String description;
+        private String type;
         private String viewType;
         private Map<String, String> properties;
     }
@@ -30,6 +31,7 @@ public class ForumDtos {
     public static class UpdateForumSettingsRequest {
         private String name;
         private String description;
+        private String type;
         private String viewType;
         private Map<String, String> properties;
     }
@@ -41,6 +43,7 @@ public class ForumDtos {
         private String slug;
         private String name;
         private String description;
+        private String type;
         private String viewType;
         private Map<String, String> properties;
         private OffsetDateTime updatedAt;
@@ -51,6 +54,7 @@ public class ForumDtos {
     public static class ForumSummaryResponse {
         private String slug;
         private String name;
+        private String type;
         private String viewType;
         private OffsetDateTime updatedAt;
         private long topicCount;

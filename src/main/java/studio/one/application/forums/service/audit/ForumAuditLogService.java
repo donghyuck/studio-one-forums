@@ -18,13 +18,13 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Service
 public class ForumAuditLogService {
     private static final String INSERT_SQL = """
-        insert into tb_forum_audit_log
+        insert into tb_application_forum_audit_log
             (board_id, entity_type, entity_id, action, actor_id, at, detail)
         values
             (:boardId, :entityType, :entityId, :action, :actorId, :at, :detail)
         """;
     private static final String INSERT_SQL_POSTGRES = """
-        insert into tb_forum_audit_log
+        insert into tb_application_forum_audit_log
             (board_id, entity_type, entity_id, action, actor_id, at, detail)
         values
             (:boardId, :entityType, :entityId, :action, :actorId, :at, cast(:detail as jsonb))

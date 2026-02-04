@@ -19,6 +19,7 @@ public class CreateForumCommand {
     private final String slug;
     private final String name;
     private final String description;
+    private final String type;
     private final String viewType;
     private final java.util.Map<String, String> properties;
     private final Long createdById;

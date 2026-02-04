@@ -2,7 +2,63 @@
 <sqlset name="forums" namespace="forums" description="Forums SQLs">
     <sql id="topicList">
         <dynamic><![CDATA[
-        select ${selectClause!"t.id as topic_id, t.title, t.status, t.updated_at"}
+        select t.id as topic_id,
+               t.title,
+               t.status,
+               t.updated_at,
+               t.created_by_id,
+               t.created_by,
+               (select count(1) from tb_application_posts p
+                 where p.topic_id = t.id and p.deleted_at is null
+                <#if includeHiddenPosts?? && includeHiddenPosts == false>
+                 and p.hidden_at is null
+                </#if>
+               ) as post_count,
+               (select p.updated_at from tb_application_posts p
+                 where p.topic_id = t.id and p.deleted_at is null
+                <#if includeHiddenPosts?? && includeHiddenPosts == false>
+                 and p.hidden_at is null
+                </#if>
+                 order by p.updated_at desc, p.id desc limit 1
+               ) as last_post_updated_at,
+               (select p.updated_by_id from tb_application_posts p
+                 where p.topic_id = t.id and p.deleted_at is null
+                <#if includeHiddenPosts?? && includeHiddenPosts == false>
+                 and p.hidden_at is null
+                </#if>
+                 order by p.updated_at desc, p.id desc limit 1
+               ) as last_post_updated_by_id,
+               (select p.updated_by from tb_application_posts p
+                 where p.topic_id = t.id and p.deleted_at is null
+                <#if includeHiddenPosts?? && includeHiddenPosts == false>
+                 and p.hidden_at is null
+                </#if>
+                 order by p.updated_at desc, p.id desc limit 1
+               ) as last_post_updated_by,
+               (select p.id from tb_application_posts p
+                 where p.topic_id = t.id and p.deleted_at is null
+                <#if includeHiddenPosts?? && includeHiddenPosts == false>
+                 and p.hidden_at is null
+                </#if>
+                 order by p.updated_at desc, p.id desc limit 1
+               ) as last_post_id,
+               coalesce(
+                 (select p.updated_at from tb_application_posts p
+                   where p.topic_id = t.id and p.deleted_at is null
+                  <#if includeHiddenPosts?? && includeHiddenPosts == false>
+                   and p.hidden_at is null
+                  </#if>
+                   order by p.updated_at desc, p.id desc limit 1
+                 ),
+                 t.updated_at
+               ) as last_activity_at,
+               (select substring(p.content, 1, 200) from tb_application_posts p
+                 where p.topic_id = t.id and p.deleted_at is null
+                <#if includeHiddenPosts?? && includeHiddenPosts == false>
+                 and p.hidden_at is null
+                </#if>
+                 order by p.updated_at desc, p.id desc limit 1
+               ) as excerpt
         from tb_application_topics t
         where t.forum_id = :forumId
         <#if includeDeleted?? && includeDeleted == false>
@@ -43,6 +99,7 @@
         update tb_application_forums
            set name = :name,
                description = :description,
+               type = :type,
                updated_by_id = :updatedById,
                updated_by = :updatedBy,
                updated_at = :updatedAt,

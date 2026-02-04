@@ -62,6 +62,11 @@ Public
 - GET `/api/forums/{forumSlug}/topics/{topicId}/posts?page=&size=&sort=`
 - PATCH `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}` (If-Match)
 - DELETE `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}` (If-Match)
+- POST `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments`
+- GET `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments`
+- GET `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments/{attachmentId}`
+- GET `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments/{attachmentId}/download`
+- DELETE `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments/{attachmentId}`
 
 Admin
 - GET `/api/mgmt/forums?q=&in=slug,name,description&page=&size=&sort=`
@@ -86,6 +91,77 @@ Admin
 - GET `/api/mgmt/forums/{forumSlug}/permissions`
 - POST `/api/mgmt/forums/{forumSlug}/permissions`
 - DELETE `/api/mgmt/forums/{forumSlug}/permissions`
+
+## Attachments
+- Requires `attachment-service` (or starter equivalent) and `studio.features.attachment.enabled=true`.
+- Configure `studio.features.forums.attachments.object-type` with the `forum_post` object type ID registered via the objecttype admin API (DB mode). Uploads/listing rely on this ID for policy + ownership.
+- Attachment endpoints sit under `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments` and return a `downloadUrl` that honors `studio.features.forums.web.base-path`.
+
+## 권한 관리 UI 연동 (관리자 저장소)
+- **GET `/api/mgmt/forums/{forumSlug}/permissions/actions`**  
+  관리자 UI가 보여줄 `PermissionAction` 전체 목록(이름/설명/displayName)을 가져갑니다.
+- **GET `/api/mgmt/forums/{forumSlug}/permissions`**  
+  현재 포럼/카테고리 조건의 ACL 룰을 조회합니다.
+- **POST/PATCH/DELETE `/api/mgmt/forums/{forumSlug}/permissions`**  
+  룰은 `PermissionAction`, `Effect(ALLOW/DENY)`, `Ownership`, `SubjectType(ROLE|USER)` 등을 포함합니다. 프론트에서는 `role`, `subjectName`/`subjectId`, `priority` 등을 입력하며, `identifierType=NAME`이면 `subjectName`을, `identifierType=ID`이면 `subjectId`를 필수로 넣어야 DB 제약(`ck_forum_acl_rule_subject_identifier`)에 걸리지 않습니다.
+- **GET `/api/mgmt/forums/{forumSlug}/permissions/check`**  
+  관리자 시뮬레이터로 `action`, `role`, `ownerId`, `locked`, `userId`, `username`을 넘겨 policy + ACL 평가 결과(`allowed`, `policyDecision`, `aclDecision`, `denyReason`)를 반환합니다.
+- `ForumMemberMgmtController`: OWNER/ADMIN/MODERATOR/MEMBER 롤만 부여하며, 세부 액션은 ACL 룰로 제어됩니다.
+
+### 사용자 뷰용 권한 상태 API
+- **GET `/api/forums/{forumSlug}/authz`**  
+  로그인한 사용자/역할 조합에서 `{forumSlug}` 게시판의 `PermissionAction`별 `allowed` 여부만 리턴합니다. 일반 뷰에서 메뉴/버튼 노출을 판단할 때 메뉴가 사용할 수 있습니다.
+- **GET `/api/forums/{forumSlug}/authz/simulate`**  
+  일반 사용자도 접근 가능한 시뮬레이터이며, `action`, `role`, `categoryId`, `ownerId`, `locked`, `userId`, `username`을 받아 policy+ACL 결과를 리턴합니다. 관리자 `/permissions/check`처럼 정책/ACL 평가 결과를 동일하게 돌려주지만, 게시판 뷰에서는 GET만 지원하므로 POST/PATCH/DELETE로 접근하면 `error.request.method.not-allowed`가 발생합니다.
+
+### 역할별 권한 매트릭스 가이드 (Vue UI 참고 데이터)
+```
+export const rolePermissionRows: RolePermissionRow[] = [
+  {
+    role: "OWNER",
+    label: "OWNER (소유자)",
+    basic:
+      "READ_*, CREATE_TOPIC, REPLY_POST, EDIT_TOPIC, DELETE_TOPIC, EDIT_POST, DELETE_POST (자신 글만)",
+    admin:
+      "HIDE_POST/LOCK_TOPIC/MANAGE_BOARD 등 관리자 액션은 ACL에서 ALLOW 필요",
+    note:
+      "ForumAccessResolver에서 OWNER는 ADMIN으로 매핑되어 정책/ACL 평가에서 관리자 후보군",
+    grantedActions: ["READ_BOARD", "READ_TOPIC", "CREATE_TOPIC", "EDIT_TOPIC", "DELETE_TOPIC", "REPLY_POST", "EDIT_POST", "DELETE_POST"],
+    adminActions: [],
+  },
+  {
+    role: "ADMIN",
+    label: "ADMIN (관리자)",
+    basic: "OWNER과 동일 + 관리자 전용 요청(기본 DENY)",
+    admin: "관리자 전용 액션은 ACL에서 명시적으로 ALLOW",
+    note: "OWNER/ADMIN/studio.features.forums.authz.admin-roles가 동일하게 취급",
+    grantedActions: ["READ_BOARD", "READ_TOPIC", "CREATE_TOPIC", "EDIT_TOPIC", "DELETE_TOPIC", "REPLY_POST", "EDIT_POST", "DELETE_POST", "HIDE_POST", "MODERATE", "PIN_TOPIC", "LOCK_TOPIC", "MANAGE_BOARD"],
+    adminActions: ["HIDE_POST", "MODERATE", "PIN_TOPIC", "LOCK_TOPIC", "MANAGE_BOARD"],
+  },
+  {
+    role: "MODERATOR",
+    label: "MODERATOR (모더레이터)",
+    basic: "READ_*, CREATE_TOPIC, REPLY_POST, 조건부 EDIT_POST/DELETE_POST",
+    admin: "HIDE_POST, MANAGE_BOARD 등 관리자 액션을 ACL로 ALLOW하면 운영자 기능 수행",
+    note: "ForumAccessResolver.isAdmin에서 관리자처럼 처리되어 ACL만 추가하면 운영자 기능 가능",
+    grantedActions: ["READ_BOARD", "READ_TOPIC", "CREATE_TOPIC", "REPLY_POST", "EDIT_POST", "DELETE_POST"],
+    adminActions: [],
+  },
+  {
+    role: "MEMBER",
+    label: "MEMBER (일반 멤버)",
+    basic: "READ_*, CREATE_TOPIC, REPLY_POST (LOCKED 토픽 제한), 본인 글 EDIT/DELETE",
+    admin: "HIDE_POST 등은 기본 DENY → ForumAclRule로 추가",
+    note: "일반 사용자, 확장 권한은 ACL 룰로 제어",
+    grantedActions: ["READ_BOARD", "READ_TOPIC", "CREATE_TOPIC", "REPLY_POST", "EDIT_POST", "DELETE_POST"],
+  },
+];
+```
+
+### UI 구성 시 체크리스트
+- 관리자 화면에서는 `/api/mgmt/forums/{forumSlug}/permissions`만 호출하고 일반 `/api/forums/...` 뷰에서는 이 엔드포인트를 직접 사용하지 마세요. 대신 `/api/forums/{forumSlug}/authz`와 `/authz/simulate`로 현재 사용자 권한을 확인합니다.
+- `/authz/simulate`는 GET만 허용하므로 POST/PATCH/DELETE로 접근하면 405(`error.request.method.not-allowed`) 에러가 납니다.
+- ACL 룰 추가 요청의 INSERT 결과가 `rule_id` 외에도 `board_id` 등이 섞여 있으면 `GeneratedKeyHolder.getKey()`가 `InvalidDataAccessApiUsageException`을 던집니다. 쿼리에서는 `RETURNING rule_id`만 가져오거나 `GeneratedKeyHolder.getKeyMap()`을 사용해 다중 키를 처리하세요.
 
 ## 검색 파라미터
 - `q`: 검색어
@@ -300,6 +376,13 @@ features.forums.persistence=jdbc
 | ADMIN_ONLY | member | N | N | N | N | N | N | N | N |
 | ADMIN_ONLY | admin | Y | Y | Y | Y | Y | Y | Y | Y |
 *작성자/관리자만 허용, **작성자/관리자 및 멤버십/설정에 따라 목록 노출
+
+### 롤별 기본 역할  
+- `OWNER` : 작성자 본인 글에 대한 `EDIT_*`/`DELETE_*`가 정책에 따라 허용되며, `HANDLE`/운영 액션(`MANAGE_BOARD`, `MODERATE`, `HIDE_POST` 등)은 ACL로 `role=OWNER` + `action` 조합을 `effect=ALLOW`로 명시해야 제공됩니다.  
+- `ADMIN` : 일반 게시글/댓글 작업과 관리자 전용 기능 모두 기본적으로 허용됩니다. ACL 계산에서도 가장 먼저 확인하며, `studio.features.forums.authz.admin-roles`에 있는 다른 역할도 같은 권한을 가집니다.
+- `MODERATOR` : 일반적인 게시글 쓰기/답글/목록 조회는 MEMBERSHIP과 동일하지만, `HIDE_POST`/`LOCK_TOPIC` 등 고급 액션은 기본적으로 DENY입니다. ACL로 `role=MODERATOR` + `action`을 `ALLOW`하면 관리자처럼 기능을 수행합니다.  
+- `MEMBER` : 일반적인 글 읽기/쓰기/댓글과 본인 글에 대한 수정/삭제는 허용되며, NOTICE/SECRET처럼 일부 게시판이나 LOCKED 토픽에서는 제한됩니다. 부족한 기능은 ACL(`role=MEMBER` + `action`)을 추가하면 해결됩니다.
+- `anonymous` : 포럼/목록/본문 읽기만 허용되며, 특정 사용자에 대해 추가 권한을 주려면 `subjectType=USER`/`identifierType` 조합으로 ACL 룰을 등록하십시오. 
 
 ## 상태 변경/숨김 옵션
 - Topic 관리: `status`, `pin`, `lock` (관리자)

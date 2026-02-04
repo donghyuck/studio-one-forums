@@ -13,6 +13,7 @@ import studio.one.application.forums.domain.exception.ForumNotFoundException;
 import studio.one.application.forums.domain.model.Forum;
 import studio.one.application.forums.domain.property.ForumProperties;
 import studio.one.application.forums.domain.repository.ForumRepository;
+import studio.one.application.forums.domain.type.ForumType;
 import studio.one.application.forums.domain.vo.ForumSlug;
 import studio.one.application.forums.persistence.jdbc.ForumQueryRepository;
 import studio.one.application.forums.persistence.jdbc.ForumSummaryMetricsRow;
@@ -49,6 +50,7 @@ public class ForumQueryService {
             forum.slug().value(),
             forum.name(),
             forum.description(),
+            forum.type() != null ? forum.type() : ForumType.COMMON,
             ForumProperties.readViewType(forum.properties()),
             forum.properties(),
             forum.updatedAt(),
@@ -113,6 +115,7 @@ public class ForumQueryService {
         return new ForumSummaryView(
             forum.slug().value(),
             forum.name(),
+            forum.type() != null ? forum.type() : ForumType.COMMON,
             ForumProperties.readViewType(forum.properties()),
             forum.updatedAt(),
             topicCount,

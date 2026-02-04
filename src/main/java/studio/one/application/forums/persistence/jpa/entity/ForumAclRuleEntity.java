@@ -16,7 +16,7 @@ import studio.one.application.forums.domain.acl.PermissionAction;
 import studio.one.application.forums.domain.acl.SubjectType;
 
 @Entity
-@Table(name = "tb_forum_acl_rule")
+@Table(name = "tb_application_forum_acl_rule")
 public class ForumAclRuleEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -94,6 +94,10 @@ public class ForumAclRuleEntity {
         this.updatedAt = updatedAt;
     }
 
+    public void setRuleId(Long ruleId) {
+        this.ruleId = ruleId;
+    }
+
     public Long getRuleId() {
         return ruleId;
     }
@@ -164,5 +168,57 @@ public class ForumAclRuleEntity {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public void setSubjectType(SubjectType subjectType) {
+        this.subjectType = subjectType;
+    }
+
+    public void setIdentifierType(IdentifierType identifierType) {
+        this.identifierType = identifierType;
+    }
+
+    public void setSubjectId(Long subjectId) {
+        this.subjectId = subjectId;
+    }
+
+    public void setSubjectName(String subjectName) {
+        this.subjectName = subjectName;
+    }
+
+    public void setAction(PermissionAction action) {
+        this.action = action;
+    }
+
+    public void setEffect(Effect effect) {
+        this.effect = effect;
+    }
+
+    public void setOwnership(Ownership ownership) {
+        this.ownership = ownership;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public void setUpdatedById(Long updatedById) {
+        this.updatedById = updatedById;
+    }
+
+    public void setUpdatedAt(OffsetDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

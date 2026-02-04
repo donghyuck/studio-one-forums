@@ -47,4 +47,10 @@ public class Forum {
         this.updatedBy = updatedBy;
         this.updatedAt = updatedAt;
     }
+
+    public void setType(ForumType type) {
+        if (type != null) {
+            this.type = type;
+        }
+    }
 }

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -21,6 +22,7 @@ public class ForumAccessResolver {
     private final Set<String> adminRoles;
     private final ObjectProvider<ForumAuthzRequestCache> cacheProvider;
 
+    @Autowired
     public ForumAccessResolver(ForumMemberRepository forumMemberRepository,
                                @Value("${studio.features.forums.authz.admin-roles:ROLE_ADMIN,ADMIN}") Collection<String> adminRoles,
                                ObjectProvider<ForumAuthzRequestCache> cacheProvider) {

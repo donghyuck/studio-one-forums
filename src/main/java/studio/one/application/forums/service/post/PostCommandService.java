@@ -14,6 +14,7 @@ import studio.one.application.forums.domain.model.Topic;
 import studio.one.application.forums.domain.repository.PostRepository;
 import studio.one.application.forums.domain.repository.TopicRepository;
 import studio.one.application.forums.service.audit.ForumAuditLogService;
+import studio.one.application.forums.service.post.ForumPostAttachmentService;
 import studio.one.application.forums.service.post.command.CreatePostCommand;
 import studio.one.application.forums.service.post.command.DeletePostCommand;
 import studio.one.application.forums.service.post.command.HidePostCommand;
@@ -33,15 +34,18 @@ public class PostCommandService {
     private final PostRepository postRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ForumAuditLogService auditLogService;
+    private final ForumPostAttachmentService postAttachmentService;
 
     public PostCommandService(TopicRepository topicRepository,
                               PostRepository postRepository,
                               ApplicationEventPublisher eventPublisher,
-                              ForumAuditLogService auditLogService) {
+                              ForumAuditLogService auditLogService,
+                              ForumPostAttachmentService postAttachmentService) {
         this.topicRepository = topicRepository;
         this.postRepository = postRepository;
         this.eventPublisher = eventPublisher;
         this.auditLogService = auditLogService;
+        this.postAttachmentService = postAttachmentService;
     }
 
     @Transactional
@@ -122,6 +126,7 @@ public class PostCommandService {
         Topic topic = topicRepository.findById(saved.topicId())
             .orElseThrow(() -> TopicNotFoundException.byId(saved.topicId()));
         auditLogService.record(topic.forumId(), "POST", saved.id(), "DELETE", command.deletedById(), null);
+        postAttachmentService.deleteAll(command.postId());
         return saved;
     }
 

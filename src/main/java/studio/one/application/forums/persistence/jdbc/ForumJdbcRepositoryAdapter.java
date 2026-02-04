@@ -266,6 +266,7 @@ public class ForumJdbcRepositoryAdapter implements ForumRepository {
             "id", forum.id(),
             "name", forum.name(),
             "description", forum.description(),
+            "type", (forum.type() != null ? forum.type() : ForumType.COMMON).name(),
             "updatedById", forum.updatedById(),
             "updatedBy", forum.updatedBy(),
             "updatedAt", forum.updatedAt(),

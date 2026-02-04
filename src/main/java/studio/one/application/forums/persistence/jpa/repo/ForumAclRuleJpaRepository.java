@@ -9,6 +9,8 @@ import studio.one.application.forums.domain.acl.PermissionAction;
 import studio.one.application.forums.persistence.jpa.entity.ForumAclRuleEntity;
 
 public interface ForumAclRuleJpaRepository extends JpaRepository<ForumAclRuleEntity, Long> {
+    List<ForumAclRuleEntity> findByForumId(long forumId);
+
     @Query("""
         select r
           from ForumAclRuleEntity r

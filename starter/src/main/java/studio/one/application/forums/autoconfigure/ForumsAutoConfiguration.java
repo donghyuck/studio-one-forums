@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import lombok.extern.slf4j.Slf4j;
 import studio.one.application.forums.autoconfigure.condition.ConditionalOnForumsPersistence;
+import studio.one.application.forums.config.ForumAttachmentProperties;
 import studio.one.application.forums.persistence.jdbc.CategoryJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.ForumMemberJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.ForumAclRuleJdbcRepositoryAdapter;
@@ -37,6 +38,7 @@ import studio.one.application.forums.persistence.jdbc.PostJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.PostQueryRepositoryImpl;
 import studio.one.application.forums.persistence.jdbc.TopicJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.TopicQueryRepositoryImpl;
+import studio.one.application.forums.persistence.jdbc.ForumQueryRepositoryImpl;
 import studio.one.application.forums.persistence.jpa.CategoryRepositoryAdapter;
 import studio.one.application.forums.persistence.jpa.ForumMemberRepositoryAdapter;
 import studio.one.application.forums.persistence.jpa.ForumAclRuleRepositoryAdapter;
@@ -52,13 +54,16 @@ import studio.one.application.forums.persistence.jpa.repo.PostJpaRepository;
 import studio.one.application.forums.persistence.jpa.repo.TopicJpaRepository;
 import studio.one.application.forums.web.controller.CategoryMgmtController;
 import studio.one.application.forums.web.controller.CategoryController;
+import studio.one.application.forums.web.controller.ForumAuthzController;
+import studio.one.application.forums.web.controller.ForumMemberMgmtController;
 import studio.one.application.forums.web.controller.ForumMgmtController;
+import studio.one.application.forums.web.controller.ForumPermissionController;
 import studio.one.application.forums.web.controller.ForumController;
 import studio.one.application.forums.web.controller.PostMgmtController;
 import studio.one.application.forums.web.controller.PostController;
+import studio.one.application.forums.web.controller.PostAttachmentController;
 import studio.one.application.forums.web.controller.TopicMgmtController;
 import studio.one.application.forums.web.controller.TopicController;
-import studio.one.application.forums.web.controller.ForumMemberMgmtController;
 import studio.one.application.forums.domain.event.listener.ForumsCacheEvictListener;
 import studio.one.platform.autoconfigure.EntityScanRegistrarSupport;
 import studio.one.platform.autoconfigure.I18nKeys;
@@ -71,25 +76,27 @@ import studio.one.platform.util.I18nUtils;
 import studio.one.platform.util.LogUtils;
 
 @AutoConfiguration
-@EnableConfigurationProperties(ForumsFeatureProperties.class)
-@ComponentScan(
-        basePackages = "studio.one.application.forums",
-        excludeFilters = {
-            @Filter(type = FilterType.ANNOTATION, classes = RestController.class),
-            @Filter(type = FilterType.ANNOTATION, classes = Controller.class),
-            @Filter(type = FilterType.ANNOTATION, classes = RestControllerAdvice.class),
-            @Filter(type = FilterType.ANNOTATION, classes = ControllerAdvice.class),
-            @Filter(type = FilterType.REGEX, pattern = "studio\\.one\\.application\\.forums\\.persistence\\..*")
-        })
+@EnableConfigurationProperties({ ForumsFeatureProperties.class, ForumAttachmentProperties.class })
+@ComponentScan(basePackages = "studio.one.application.forums", excludeFilters = {
+        @Filter(type = FilterType.ANNOTATION, classes = RestController.class),
+        @Filter(type = FilterType.ANNOTATION, classes = Controller.class),
+        @Filter(type = FilterType.ANNOTATION, classes = RestControllerAdvice.class),
+        @Filter(type = FilterType.ANNOTATION, classes = ControllerAdvice.class),
+        @Filter(type = FilterType.REGEX, pattern = "studio\\.one\\.application\\.forums\\.persistence\\..*")
+})
 /**
  * Forums 자동 설정.
  *
- * <p>개정이력</p>
+ * <p>
+ * 개정이력
+ * </p>
+ * 
  * <pre>
  * 2026-01-14  Son Donghyuck  최초 생성
  * </pre>
  */
-@ConditionalOnProperty(prefix = PropertyKeys.Features.PREFIX + ".forums", name = "enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = PropertyKeys.Features.PREFIX
+        + ".forums", name = "enabled", havingValue = "true", matchIfMissing = false)
 @Slf4j
 public class ForumsAutoConfiguration {
 
@@ -100,11 +107,13 @@ public class ForumsAutoConfiguration {
     @ConditionalOnForumsPersistence(PersistenceProperties.Type.jpa)
     static class JpaEntityScanConfig {
         @Bean
-        static BeanDefinitionRegistryPostProcessor entityScanRegistrar(Environment env, ObjectProvider<I18n> i18nProvider) {
+        static BeanDefinitionRegistryPostProcessor entityScanRegistrar(Environment env,
+                ObjectProvider<I18n> i18nProvider) {
             I18n i18n = I18nUtils.resolve(i18nProvider);
             String entityKey = PropertyKeys.Features.PREFIX + ".forums.entity-packages";
             String packageName = ForumEntity.class.getPackage().getName();
-            log.info(LogUtils.format(i18n, I18nKeys.AutoConfig.Feature.EntityScan.PREPARING, FEATURE_NAME, entityKey, packageName));
+            log.info(LogUtils.format(i18n, I18nKeys.AutoConfig.Feature.EntityScan.PREPARING, FEATURE_NAME, entityKey,
+                    packageName));
             return EntityScanRegistrarSupport.entityScanRegistrar(entityKey, packageName);
         }
     }
@@ -112,7 +121,11 @@ public class ForumsAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     @ConditionalOnBean(EntityManagerFactory.class)
     @ConditionalOnForumsPersistence(PersistenceProperties.Type.jpa)
-    @EnableJpaRepositories(basePackageClasses = { ForumJpaRepository.class, ForumMemberJpaRepository.class })
+    @EnableJpaRepositories(basePackageClasses = {
+            ForumJpaRepository.class,
+            ForumMemberJpaRepository.class,
+            ForumAclRuleJpaRepository.class
+    })
     static class JpaWiring {
     }
 
@@ -162,42 +175,42 @@ public class ForumsAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean(ForumJdbcRepositoryAdapter.class)
         ForumJdbcRepositoryAdapter forumJdbcRepositoryAdapter(
-            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
             return new ForumJdbcRepositoryAdapter(template);
         }
 
         @Bean
         @ConditionalOnMissingBean(CategoryJdbcRepositoryAdapter.class)
         CategoryJdbcRepositoryAdapter categoryJdbcRepositoryAdapter(
-            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
             return new CategoryJdbcRepositoryAdapter(template);
         }
 
         @Bean
         @ConditionalOnMissingBean(TopicJdbcRepositoryAdapter.class)
         TopicJdbcRepositoryAdapter topicJdbcRepositoryAdapter(
-            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
             return new TopicJdbcRepositoryAdapter(template);
         }
 
         @Bean
         @ConditionalOnMissingBean(PostJdbcRepositoryAdapter.class)
         PostJdbcRepositoryAdapter postJdbcRepositoryAdapter(
-            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
             return new PostJdbcRepositoryAdapter(template);
         }
 
         @Bean
         @ConditionalOnMissingBean(ForumAclRuleJdbcRepositoryAdapter.class)
         ForumAclRuleJdbcRepositoryAdapter forumAclRuleJdbcRepositoryAdapter(
-            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
             return new ForumAclRuleJdbcRepositoryAdapter(template);
         }
 
         @Bean
         @ConditionalOnMissingBean(ForumMemberJdbcRepositoryAdapter.class)
         ForumMemberJdbcRepositoryAdapter forumMemberJdbcRepositoryAdapter(
-            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template) {
             return new ForumMemberJdbcRepositoryAdapter(template);
         }
     }
@@ -205,54 +218,71 @@ public class ForumsAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     static class ForumsJdbcQueryConfig {
         @Bean
-        @ConditionalOnMissingBean(TopicQueryRepositoryImpl.class)
-        TopicQueryRepositoryImpl topicQueryRepositoryImpl(
-            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template,
-            ObjectProvider<I18n> i18nProvider) {
+        @ConditionalOnMissingBean(ForumQueryRepositoryImpl.class)
+        ForumQueryRepositoryImpl forumQueryRepositoryImpl(
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template,
+                ObjectProvider<I18n> i18nProvider) {
             I18n i18n = I18nUtils.resolve(i18nProvider);
             log.info(LogUtils.format(i18n, I18nKeys.AutoConfig.Feature.Service.DETAILS, FEATURE_NAME,
-                LogUtils.blue(TopicQueryRepositoryImpl.class, true),
-                LogUtils.red(State.CREATED.toString())));
+                    LogUtils.blue(ForumQueryRepositoryImpl.class, true),
+                    LogUtils.red(State.CREATED.toString())));
+            return new ForumQueryRepositoryImpl(template);
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(TopicQueryRepositoryImpl.class)
+        TopicQueryRepositoryImpl topicQueryRepositoryImpl(
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template,
+                ObjectProvider<I18n> i18nProvider) {
+            I18n i18n = I18nUtils.resolve(i18nProvider);
+            log.info(LogUtils.format(i18n, I18nKeys.AutoConfig.Feature.Service.DETAILS, FEATURE_NAME,
+                    LogUtils.blue(TopicQueryRepositoryImpl.class, true),
+                    LogUtils.red(State.CREATED.toString())));
             return new TopicQueryRepositoryImpl(template);
         }
 
         @Bean
         @ConditionalOnMissingBean(PostQueryRepositoryImpl.class)
         PostQueryRepositoryImpl postQueryRepositoryImpl(
-            @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template,
-            ObjectProvider<I18n> i18nProvider) {
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template,
+                ObjectProvider<I18n> i18nProvider) {
             I18n i18n = I18nUtils.resolve(i18nProvider);
             log.info(LogUtils.format(i18n, I18nKeys.AutoConfig.Feature.Service.DETAILS, FEATURE_NAME,
-                LogUtils.blue(PostQueryRepositoryImpl.class, true),
-                LogUtils.red(State.CREATED.toString())));
+                    LogUtils.blue(PostQueryRepositoryImpl.class, true),
+                    LogUtils.red(State.CREATED.toString())));
             return new PostQueryRepositoryImpl(template);
         }
     }
 
     @Configuration
-    @ConditionalOnProperty(prefix = PropertyKeys.Features.PREFIX + ".forums.web", name = "enabled", havingValue = "true", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = PropertyKeys.Features.PREFIX
+            + ".forums.web", name = "enabled", havingValue = "true", matchIfMissing = true)
     @Import({
-        ForumController.class,
-        CategoryController.class,
-        TopicController.class,
-        PostController.class,
-        ForumMgmtController.class,
-        ForumMemberMgmtController.class,
-        CategoryMgmtController.class,
-        TopicMgmtController.class,
-        PostMgmtController.class
+            ForumController.class,
+            ForumAuthzController.class,
+            CategoryController.class,
+            TopicController.class,
+            PostController.class,
+            ForumMgmtController.class,
+            ForumMemberMgmtController.class,
+            CategoryMgmtController.class,
+            TopicMgmtController.class,
+            PostMgmtController.class,
+            PostAttachmentController.class,
+            ForumPermissionController.class
     })
     static class ForumsWebConfig {
 
         @Bean
         @ConditionalOnBean(CacheManager.class)
-        @ConditionalOnProperty(prefix = PropertyKeys.Features.PREFIX + ".forums.cache", name = "enabled", havingValue = "true", matchIfMissing = true)
+        @ConditionalOnProperty(prefix = PropertyKeys.Features.PREFIX
+                + ".forums.cache", name = "enabled", havingValue = "true", matchIfMissing = true)
         ForumsCacheEvictListener forumsCacheEvictListener(ObjectProvider<CacheManager> cacheManagerProvider,
-                                                          ObjectProvider<I18n> i18nProvider) {
+                ObjectProvider<I18n> i18nProvider) {
             I18n i18n = I18nUtils.resolve(i18nProvider);
             log.info(LogUtils.format(i18n, I18nKeys.AutoConfig.Feature.Service.DETAILS, FEATURE_NAME,
-                LogUtils.blue(ForumsCacheEvictListener.class, true),
-                LogUtils.red(State.CREATED.toString())));
+                    LogUtils.blue(ForumsCacheEvictListener.class, true),
+                    LogUtils.red(State.CREATED.toString())));
             return new ForumsCacheEvictListener(cacheManagerProvider.getIfAvailable());
         }
     }

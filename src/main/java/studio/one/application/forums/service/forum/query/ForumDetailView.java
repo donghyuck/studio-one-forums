@@ -5,6 +5,7 @@ import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import studio.one.application.forums.domain.type.ForumType;
 import studio.one.application.forums.domain.type.ForumViewType;
 
 /**
@@ -22,6 +23,7 @@ public class ForumDetailView {
     private final String slug;
     private final String name;
     private final String description;
+    private final ForumType type;
     private final ForumViewType viewType;
     private final Map<String, String> properties;
     private final OffsetDateTime updatedAt;

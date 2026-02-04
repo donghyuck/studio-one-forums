@@ -93,6 +93,7 @@ class ForumControllerPagingTest {
                 .map(forum -> new ForumSummaryView(
                     forum.slug().value(),
                     forum.name(),
+                    studio.one.application.forums.domain.type.ForumType.COMMON,
                     studio.one.application.forums.domain.type.ForumViewType.GENERAL,
                     forum.updatedAt(),
                     0L,
@@ -303,6 +304,26 @@ class ForumControllerPagingTest {
                                                                                         PermissionAction action, Set<String> roleNames,
                                                                                         Set<Long> roleIds, Long userId, String username) {
             return List.of();
+        }
+ 
+        @Override
+        public List<studio.one.application.forums.domain.acl.ForumAclRule> findByForumId(long forumId) {
+            return List.of();
+        }
+
+        @Override
+        public Optional<studio.one.application.forums.domain.acl.ForumAclRule> findById(long ruleId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public studio.one.application.forums.domain.acl.ForumAclRule save(studio.one.application.forums.domain.acl.ForumAclRule rule) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void delete(studio.one.application.forums.domain.acl.ForumAclRule rule) {
+            // no-op
         }
     }
 }

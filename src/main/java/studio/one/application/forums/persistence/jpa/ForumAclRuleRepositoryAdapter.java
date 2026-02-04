@@ -1,6 +1,7 @@
 package studio.one.application.forums.persistence.jpa;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Repository;
@@ -58,6 +59,29 @@ public class ForumAclRuleRepositoryAdapter implements ForumAclRuleRepository {
             .collect(Collectors.toList());
     }
 
+    public List<ForumAclRule> findByForumId(long forumId) {
+        return forumAclRuleJpaRepository.findByForumId(forumId).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<ForumAclRule> findById(long ruleId) {
+        return forumAclRuleJpaRepository.findById(ruleId).map(this::toDomain);
+    }
+
+    @Override
+    public ForumAclRule save(ForumAclRule rule) {
+        ForumAclRuleEntity entity = toEntity(rule);
+        ForumAclRuleEntity saved = forumAclRuleJpaRepository.save(entity);
+        return toDomain(saved);
+    }
+
+    @Override
+    public void delete(ForumAclRule rule) {
+        forumAclRuleJpaRepository.delete(toEntity(rule));
+    }
+
     private ForumAclRule toDomain(ForumAclRuleEntity entity) {
         SubjectType subjectType = entity.getSubjectType() != null ? entity.getSubjectType() : SubjectType.ROLE;
         IdentifierType identifierType = entity.getIdentifierType() != null ? entity.getIdentifierType() : IdentifierType.NAME;
@@ -84,5 +108,30 @@ public class ForumAclRuleRepositoryAdapter implements ForumAclRuleRepository {
             entity.getUpdatedById(),
             entity.getUpdatedAt()
         );
+    }
+
+    private ForumAclRuleEntity toEntity(ForumAclRule rule) {
+        ForumAclRuleEntity entity = new ForumAclRuleEntity(
+            rule.forumId(),
+            rule.categoryId(),
+            rule.role(),
+            rule.subjectType(),
+            rule.identifierType(),
+            rule.subjectId(),
+            rule.subjectName(),
+            rule.action(),
+            rule.effect(),
+            rule.ownership(),
+            rule.priority(),
+            rule.enabled(),
+            rule.createdById(),
+            rule.createdAt(),
+            rule.updatedById(),
+            rule.updatedAt()
+        );
+        if (rule.ruleId() != null) {
+            entity.setRuleId(rule.ruleId());
+        }
+        return entity;
     }
 }

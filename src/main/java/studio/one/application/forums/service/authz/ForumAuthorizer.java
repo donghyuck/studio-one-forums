@@ -2,6 +2,7 @@ package studio.one.application.forums.service.authz;
 
 import java.util.Set;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import studio.one.application.forums.domain.acl.PermissionAction;
 import studio.one.application.forums.domain.model.Forum;
@@ -14,6 +15,7 @@ public class ForumAuthorizer {
     private final ForumAclAuthorizer aclAuthorizer;
     private final ObjectProvider<ForumAuthzRequestCache> cacheProvider;
 
+    @Autowired
     public ForumAuthorizer(ForumAccessResolver accessResolver,
                            ForumPolicyEngine policyEngine,
                            ForumAclAuthorizer aclAuthorizer,

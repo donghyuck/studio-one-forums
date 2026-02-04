@@ -20,7 +20,7 @@ create table if not exists tb_application_forum_property (
     primary key (forum_id, property_name)
 );
 
-create table if not exists tb_forum_acl_rule (
+create table if not exists tb_application_forum_acl_rule (
     rule_id bigserial primary key,
     board_id bigint not null,
     category_id bigint,
@@ -47,16 +47,16 @@ create table if not exists tb_forum_acl_rule (
 );
 
 create index if not exists idx_forum_acl_rule_board_category_role_action_enabled
-    on tb_forum_acl_rule (board_id, category_id, role, action, enabled);
+    on tb_application_forum_acl_rule (board_id, category_id, role, action, enabled);
 create index if not exists idx_forum_acl_rule_board_role_action_enabled
-    on tb_forum_acl_rule (board_id, role, action, enabled);
+    on tb_application_forum_acl_rule (board_id, role, action, enabled);
 create index if not exists idx_forum_acl_rule_board_category_subject_action_enabled
-    on tb_forum_acl_rule (board_id, category_id, action, subject_type, identifier_type, enabled);
+    on tb_application_forum_acl_rule (board_id, category_id, action, subject_type, identifier_type, enabled);
 create index if not exists idx_forum_acl_rule_board_category_subject_id_action_enabled
-    on tb_forum_acl_rule (board_id, category_id, subject_type, identifier_type, subject_id, action, enabled)
+    on tb_application_forum_acl_rule (board_id, category_id, subject_type, identifier_type, subject_id, action, enabled)
     where identifier_type = 'ID';
 create index if not exists idx_forum_acl_rule_board_category_subject_name_action_enabled
-    on tb_forum_acl_rule (board_id, category_id, subject_type, identifier_type, subject_name, action, enabled)
+    on tb_application_forum_acl_rule (board_id, category_id, subject_type, identifier_type, subject_name, action, enabled)
     where identifier_type = 'NAME';
 
 create table if not exists tb_application_forum_member (
@@ -126,7 +126,7 @@ create table if not exists tb_application_posts (
 create index if not exists idx_topics_forum_updated on tb_application_topics (forum_id, updated_at desc);
 create index if not exists idx_posts_topic_created on tb_application_posts (topic_id, created_at asc);
 
-create table if not exists tb_forum_audit_log (
+create table if not exists tb_application_forum_audit_log (
     audit_id bigserial primary key,
     board_id bigint,
     entity_type varchar(30),
@@ -137,6 +137,6 @@ create table if not exists tb_forum_audit_log (
     detail jsonb
 );
 
-create index if not exists idx_forum_audit_board_at on tb_forum_audit_log (board_id, at desc);
-create index if not exists idx_forum_audit_entity on tb_forum_audit_log (entity_type, entity_id);
-create index if not exists idx_forum_audit_actor_at on tb_forum_audit_log (actor_id, at desc);
+create index if not exists idx_forum_audit_board_at on tb_application_forum_audit_log (board_id, at desc);
+create index if not exists idx_forum_audit_entity on tb_application_forum_audit_log (entity_type, entity_id);
+create index if not exists idx_forum_audit_actor_at on tb_application_forum_audit_log (actor_id, at desc);

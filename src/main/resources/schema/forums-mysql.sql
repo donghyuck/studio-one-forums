@@ -85,7 +85,7 @@ create table if not exists tb_application_posts (
 create index idx_topics_forum_updated on tb_application_topics (forum_id, updated_at desc);
 create index idx_posts_topic_created on tb_application_posts (topic_id, created_at asc);
 
-create table if not exists tb_forum_audit_log (
+create table if not exists tb_application_forum_audit_log (
     audit_id bigint auto_increment primary key,
     board_id bigint,
     entity_type varchar(30),
@@ -96,6 +96,6 @@ create table if not exists tb_forum_audit_log (
     detail json
 ) engine=InnoDB;
 
-create index idx_forum_audit_board_at on tb_forum_audit_log (board_id, at desc);
-create index idx_forum_audit_entity on tb_forum_audit_log (entity_type, entity_id);
-create index idx_forum_audit_actor_at on tb_forum_audit_log (actor_id, at desc);
+create index idx_forum_audit_board_at on tb_application_forum_audit_log (board_id, at desc);
+create index idx_forum_audit_entity on tb_application_forum_audit_log (entity_type, entity_id);
+create index idx_forum_audit_actor_at on tb_application_forum_audit_log (actor_id, at desc);

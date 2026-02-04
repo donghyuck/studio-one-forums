@@ -20,6 +20,7 @@ public class UpdateForumSettingsCommand {
     private final String slug;
     private final String name;
     private final String description;
+    private final String type;
     private final String viewType;
     private final Map<String, String> properties;
     private final Long updatedById;

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,6 +52,22 @@ public class PostMgmtController {
             postMapper.toCreateCommand(forumSlug, topicId, request, createdById, createdBy)
         ).id();
         return ResponseEntity.ok(ApiResponse.ok(Map.of("postId", postId)));
+    }
+
+    @PatchMapping("/{postId}")
+    @PreAuthorize("@forumAuthz.canPost(#postId, 'EDIT_POST')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updatePost(@PathVariable String forumSlug,
+                                                                       @PathVariable Long topicId,
+                                                                       @PathVariable Long postId,
+                                                                       @RequestBody PostDtos.UpdatePostRequest request,
+                                                                       @RequestHeader(value = "If-Match", required = false) String ifMatch,
+                                                                       @AuthenticationPrincipal(expression = "userId") Long userId,
+                                                                       @AuthenticationPrincipal(expression = "username") String username) {
+        Long updatedById = requireUserId(userId);
+        String updatedBy = requireUsername(username);
+        long expectedVersion = EtagUtil.parseIfMatchVersion(ifMatch);
+        postCommandService.updatePost(postMapper.toUpdateCommand(postId, request, updatedById, updatedBy, expectedVersion));
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("postId", postId, "updated", true)));
     }
 
     @PatchMapping("/{postId}/hide")

@@ -54,13 +54,14 @@ public class ForumCommandService {
         ForumViewType viewType = (command.viewType() == null || command.viewType().isBlank())
             ? null
             : ForumViewType.from(command.viewType());
+        ForumType type = resolveType(command.type(), ForumType.COMMON);
         Map<String, String> properties = ForumProperties.normalizeForWrite(command.properties(), viewType);
         Forum forum = new Forum(
             null,
             slug,
             command.name(),
             command.description(),
-            ForumType.COMMON,
+            type,
             properties,
             command.createdById(),
             command.createdBy(),
@@ -86,6 +87,10 @@ public class ForumCommandService {
         }
         Map<String, String> properties = resolveProperties(forum, command);
         OffsetDateTime now = OffsetDateTime.now();
+        ForumType newType = resolveType(command.type(), null);
+        if (newType != null) {
+            forum.setType(newType);
+        }
         forum.updateSettings(
             command.name(),
             command.description(),
@@ -118,5 +123,12 @@ public class ForumCommandService {
             viewType = ForumProperties.readViewType(forum.properties());
         }
         return ForumProperties.normalizeForWrite(base, viewType);
+    }
+
+    private ForumType resolveType(String value, ForumType fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        return ForumType.from(value);
     }
 }

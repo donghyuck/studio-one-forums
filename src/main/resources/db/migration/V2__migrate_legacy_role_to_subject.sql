@@ -1,4 +1,4 @@
-update tb_forum_acl_rule
+update tb_application_forum_acl_rule
    set subject_type = 'ROLE',
        identifier_type = 'NAME',
        subject_name = role
