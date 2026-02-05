@@ -25,6 +25,7 @@ Discourse 스타일의 포럼(Forums) 모듈입니다. 멀티 포럼/카테고�
 - Category: 생성/목록
 - Topic: 생성/목록/상세/수정/삭제/상태변경
 - Post: 생성/목록/수정/삭제
+- Attachments: 댓글 첨부파일 업로드/목록/다운로드/삭제
 - Membership: 게시판별 관리자/운영진/회원 관리
 
 ## 권한별 작업
@@ -33,12 +34,14 @@ Public (사용자)
 - Category: 목록 조회
 - Topic: 생성/목록/상세/수정/삭제 (권한 기반)
 - Post: 생성/목록/수정/삭제 (권한 기반)
+- Attachment: 댓글 첨부파일 업로드/목록/다운로드/삭제 (권한 기반)
 
 Admin (관리자)
 - Forum: 생성, 설정 변경
 - Category: 생성
 - Topic: 생성/수정/삭제/상태 변경/핀/락
 - Post: 생성/수정/삭제/숨김
+- Attachment: 댓글 첨부파일 업로드/목록/다운로드/삭제
 - Membership: 게시판별 멤버/역할 관리
 
 ## 응답 포맷
@@ -65,6 +68,7 @@ Public
 - POST `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments`
 - GET `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments`
 - GET `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments/{attachmentId}`
+- GET `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments/{attachmentId}/thumbnail`
 - GET `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments/{attachmentId}/download`
 - DELETE `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments/{attachmentId}`
 
@@ -96,6 +100,14 @@ Admin
 - Requires `attachment-service` (or starter equivalent) and `studio.features.attachment.enabled=true`.
 - Configure `studio.features.forums.attachments.object-type` with the `forum_post` object type ID registered via the objecttype admin API (DB mode). Uploads/listing rely on this ID for policy + ownership.
 - Attachment endpoints sit under `/api/forums/{forumSlug}/topics/{topicId}/posts/{postId}/attachments` and return a `downloadUrl` that honors `studio.features.forums.web.base-path`.
+- Thumbnail endpoint is public (no auth) for UI thumbnails: `/thumbnail` returns 204 for non-image or unavailable thumbnails.
+- 권한은 forums 권한 시스템(ForumAuthz: Policy + ACL)으로 제어하며, 첨부파일 엔드포인트는 아래 `PermissionAction`을 사용합니다.
+  - GET(목록/조회/다운로드): `READ_ATTACHMENT`
+  - POST/DELETE(업로드/삭제): `UPLOAD_ATTACHMENT`
+- 기본 정책은 게시판 타입별로 다음과 같이 동작합니다.
+  - COMMON/NOTICE: `READ_ATTACHMENT`는 공개(ALLOW), `UPLOAD_ATTACHMENT`는 작성자/관리자만 허용
+  - SECRET: `READ_ATTACHMENT`도 작성자/관리자만 허용 (권한 없으면 404로 숨김)
+- 다운로드를 사용자/역할 단위로 차단하려면 ACL 룰에서 `READ_ATTACHMENT`에 `DENY`를 추가하세요. (예: `ROLE_ANONYMOUS` DENY → 로그인 사용자만 다운로드 가능)
 
 ## 권한 관리 UI 연동 (관리자 저장소)
 - **GET `/api/mgmt/forums/{forumSlug}/permissions/actions`**  
@@ -121,39 +133,39 @@ export const rolePermissionRows: RolePermissionRow[] = [
     role: "OWNER",
     label: "OWNER (소유자)",
     basic:
-      "READ_*, CREATE_TOPIC, REPLY_POST, EDIT_TOPIC, DELETE_TOPIC, EDIT_POST, DELETE_POST (자신 글만)",
+      "READ_*, CREATE_TOPIC, REPLY_POST, UPLOAD_ATTACHMENT (자신 글만), EDIT_TOPIC, DELETE_TOPIC, EDIT_POST, DELETE_POST (자신 글만)",
     admin:
       "HIDE_POST/LOCK_TOPIC/MANAGE_BOARD 등 관리자 액션은 ACL에서 ALLOW 필요",
     note:
       "ForumAccessResolver에서 OWNER는 ADMIN으로 매핑되어 정책/ACL 평가에서 관리자 후보군",
-    grantedActions: ["READ_BOARD", "READ_TOPIC", "CREATE_TOPIC", "EDIT_TOPIC", "DELETE_TOPIC", "REPLY_POST", "EDIT_POST", "DELETE_POST"],
+    grantedActions: ["READ_BOARD", "READ_TOPIC_LIST", "READ_TOPIC_CONTENT", "READ_ATTACHMENT", "CREATE_TOPIC", "EDIT_TOPIC", "DELETE_TOPIC", "REPLY_POST", "UPLOAD_ATTACHMENT", "EDIT_POST", "DELETE_POST"],
     adminActions: [],
   },
   {
     role: "ADMIN",
     label: "ADMIN (관리자)",
-    basic: "OWNER과 동일 + 관리자 전용 요청(기본 DENY)",
+    basic: "OWNER과 동일 + 첨부파일 업로드/삭제 포함 + 관리자 전용 요청(기본 DENY)",
     admin: "관리자 전용 액션은 ACL에서 명시적으로 ALLOW",
     note: "OWNER/ADMIN/studio.features.forums.authz.admin-roles가 동일하게 취급",
-    grantedActions: ["READ_BOARD", "READ_TOPIC", "CREATE_TOPIC", "EDIT_TOPIC", "DELETE_TOPIC", "REPLY_POST", "EDIT_POST", "DELETE_POST", "HIDE_POST", "MODERATE", "PIN_TOPIC", "LOCK_TOPIC", "MANAGE_BOARD"],
+    grantedActions: ["READ_BOARD", "READ_TOPIC_LIST", "READ_TOPIC_CONTENT", "READ_ATTACHMENT", "CREATE_TOPIC", "EDIT_TOPIC", "DELETE_TOPIC", "REPLY_POST", "UPLOAD_ATTACHMENT", "EDIT_POST", "DELETE_POST", "HIDE_POST", "MODERATE", "PIN_TOPIC", "LOCK_TOPIC", "MANAGE_BOARD"],
     adminActions: ["HIDE_POST", "MODERATE", "PIN_TOPIC", "LOCK_TOPIC", "MANAGE_BOARD"],
   },
   {
     role: "MODERATOR",
     label: "MODERATOR (모더레이터)",
-    basic: "READ_*, CREATE_TOPIC, REPLY_POST, 조건부 EDIT_POST/DELETE_POST",
+    basic: "READ_*, CREATE_TOPIC, REPLY_POST, UPLOAD_ATTACHMENT (자신 글만), 조건부 EDIT_POST/DELETE_POST",
     admin: "HIDE_POST, MANAGE_BOARD 등 관리자 액션을 ACL로 ALLOW하면 운영자 기능 수행",
     note: "ForumAccessResolver.isAdmin에서 관리자처럼 처리되어 ACL만 추가하면 운영자 기능 가능",
-    grantedActions: ["READ_BOARD", "READ_TOPIC", "CREATE_TOPIC", "REPLY_POST", "EDIT_POST", "DELETE_POST"],
+    grantedActions: ["READ_BOARD", "READ_TOPIC_LIST", "READ_TOPIC_CONTENT", "READ_ATTACHMENT", "CREATE_TOPIC", "REPLY_POST", "UPLOAD_ATTACHMENT", "EDIT_POST", "DELETE_POST"],
     adminActions: [],
   },
   {
     role: "MEMBER",
     label: "MEMBER (일반 멤버)",
-    basic: "READ_*, CREATE_TOPIC, REPLY_POST (LOCKED 토픽 제한), 본인 글 EDIT/DELETE",
+    basic: "READ_*, CREATE_TOPIC, REPLY_POST (LOCKED 토픽 제한), UPLOAD_ATTACHMENT (자신 글만), 본인 글 EDIT/DELETE",
     admin: "HIDE_POST 등은 기본 DENY → ForumAclRule로 추가",
     note: "일반 사용자, 확장 권한은 ACL 룰로 제어",
-    grantedActions: ["READ_BOARD", "READ_TOPIC", "CREATE_TOPIC", "REPLY_POST", "EDIT_POST", "DELETE_POST"],
+    grantedActions: ["READ_BOARD", "READ_TOPIC_LIST", "READ_TOPIC_CONTENT", "READ_ATTACHMENT", "CREATE_TOPIC", "REPLY_POST", "UPLOAD_ATTACHMENT", "EDIT_POST", "DELETE_POST"],
   },
 ];
 ```
@@ -161,6 +173,7 @@ export const rolePermissionRows: RolePermissionRow[] = [
 ### UI 구성 시 체크리스트
 - 관리자 화면에서는 `/api/mgmt/forums/{forumSlug}/permissions`만 호출하고 일반 `/api/forums/...` 뷰에서는 이 엔드포인트를 직접 사용하지 마세요. 대신 `/api/forums/{forumSlug}/authz`와 `/authz/simulate`로 현재 사용자 권한을 확인합니다.
 - `/authz/simulate`는 GET만 허용하므로 POST/PATCH/DELETE로 접근하면 405(`error.request.method.not-allowed`) 에러가 납니다.
+- 첨부파일은 본문(`READ_TOPIC_CONTENT`)과 별개로 `READ_ATTACHMENT`/`UPLOAD_ATTACHMENT`로 제어됩니다. 공개 글이라도 다운로드를 막고 싶으면 `READ_ATTACHMENT`에 `DENY` 룰을 추가하세요.
 - ACL 룰 추가 요청의 INSERT 결과가 `rule_id` 외에도 `board_id` 등이 섞여 있으면 `GeneratedKeyHolder.getKey()`가 `InvalidDataAccessApiUsageException`을 던집니다. 쿼리에서는 `RETURNING rule_id`만 가져오거나 `GeneratedKeyHolder.getKeyMap()`을 사용해 다중 키를 처리하세요.
 
 ## 검색 파라미터

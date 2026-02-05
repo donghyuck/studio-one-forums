@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import studio.one.application.attachment.domain.model.Attachment;
 import studio.one.application.attachment.service.AttachmentService;
+import studio.one.application.attachment.thumbnail.ThumbnailData;
+import studio.one.application.attachment.thumbnail.ThumbnailService;
 import studio.one.application.forums.config.ForumAttachmentProperties;
 import studio.one.application.forums.domain.exception.PostNotFoundException;
 import studio.one.application.forums.domain.model.Post;
@@ -27,6 +30,7 @@ public class ForumPostAttachmentService {
     private final AttachmentService attachmentService;
     private final PostRepository postRepository;
     private final ForumAttachmentProperties attachmentProperties;
+    private final ObjectProvider<ThumbnailService> thumbnailServiceProvider;
 
     public Attachment upload(long postId, MultipartFile file) {
 
@@ -65,6 +69,15 @@ public class ForumPostAttachmentService {
         } catch (IOException ex) {
             throw new IllegalArgumentException("failed to open attachment stream", ex);
         }
+    }
+
+    public java.util.Optional<ThumbnailData> getThumbnail(long postId, long attachmentId, int size, String format) {
+        Attachment attachment = get(postId, attachmentId);
+        ThumbnailService thumbnailService = thumbnailServiceProvider.getIfAvailable();
+        if (thumbnailService == null) {
+            return java.util.Optional.empty();
+        }
+        return thumbnailService.getOrCreate(attachment, size, format);
     }
 
     public void delete(long postId, long attachmentId) {

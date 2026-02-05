@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,6 +22,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import studio.one.application.attachment.domain.model.Attachment;
+import studio.one.application.attachment.thumbnail.ThumbnailData;
 import studio.one.application.forums.config.ForumWebProperties;
 import studio.one.application.forums.service.post.ForumPostAttachmentService;
 import studio.one.application.forums.web.dto.PostAttachmentDtos;
@@ -99,6 +101,30 @@ public class PostAttachmentController {
                     .build();
             headers.setContentDisposition(disposition);
         }
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(body);
+    }
+
+    @GetMapping("/{attachmentId}/thumbnail")
+    public ResponseEntity<StreamingResponseBody> thumbnail(@PathVariable String forumSlug,
+            @PathVariable Long topicId,
+            @PathVariable Long postId,
+            @PathVariable Long attachmentId,
+            @org.springframework.web.bind.annotation.RequestParam(value = "size", required = false, defaultValue = "128") int size,
+            @org.springframework.web.bind.annotation.RequestParam(value = "format", required = false, defaultValue = "png") String format) {
+        var result = attachmentService.getThumbnail(postId, attachmentId, size, format);
+        if (result.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        ThumbnailData data = result.get();
+        StreamingResponseBody body = out -> {
+            out.write(data.getBytes());
+        };
+        HttpHeaders headers = new HttpHeaders();
+        headers.setCacheControl(CacheControl.maxAge(3600, java.util.concurrent.TimeUnit.SECONDS).getHeaderValue());
+        headers.setContentType(resolveMediaType(data.getContentType()));
+        headers.setContentLength(data.getBytes().length);
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(body);
