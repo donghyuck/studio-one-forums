@@ -19,7 +19,8 @@ public class CommonBoardTypePolicy implements ForumTypePolicy {
         }
         if (action == PermissionAction.READ_BOARD
             || action == PermissionAction.READ_TOPIC_LIST
-            || action == PermissionAction.READ_TOPIC_CONTENT) {
+            || action == PermissionAction.READ_TOPIC_CONTENT
+            || action == PermissionAction.READ_ATTACHMENT) {
             return PolicyDecision.ALLOW;
         }
         if (action == PermissionAction.CREATE_TOPIC || action == PermissionAction.REPLY_POST) {
@@ -29,7 +30,8 @@ public class CommonBoardTypePolicy implements ForumTypePolicy {
             return isMember ? PolicyDecision.ALLOW : PolicyDecision.DENY;
         }
         if (action == PermissionAction.EDIT_TOPIC || action == PermissionAction.DELETE_TOPIC
-            || action == PermissionAction.EDIT_POST || action == PermissionAction.DELETE_POST) {
+            || action == PermissionAction.EDIT_POST || action == PermissionAction.DELETE_POST
+            || action == PermissionAction.UPLOAD_ATTACHMENT) {
             return (isOwner || isAdmin) ? PolicyDecision.ALLOW : PolicyDecision.DENY;
         }
         if (action == PermissionAction.PIN_TOPIC || action == PermissionAction.LOCK_TOPIC

@@ -38,10 +38,7 @@ public class ForumPostAttachmentService {
         int objectType = resolveObjectType();
         String name = file.getOriginalFilename();
         String contentType = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
-        int size = Math.toIntExact(file.getSize());
-
-        log.debug("upload file objectType : {}, name : {}, contentType: {}", objectType, name, contentType);
-
+        int size = Math.toIntExact(file.getSize()); 
         try (InputStream inputStream = file.getInputStream()) {
             return attachmentService.createAttachment(objectType, postId, name, contentType, inputStream, size);
         } catch (IOException ex) {

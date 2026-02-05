@@ -1,3 +1,24 @@
+/**
+ *
+ *      Copyright 2026
+ *
+ *      Licensed under the Apache License, Version 2.0 (the 'License');
+ *      you may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *      Unless required by applicable law or agreed to in writing, software
+ *      distributed under the License is distributed on an 'AS IS' BASIS,
+ *      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *      See the License for the specific language governing permissions and
+ *      limitations under the License.
+ *
+ *      @file ForumAuthz.java
+ *      @date 2026
+ *
+ */
+
 package studio.one.application.forums.web.authz;
 
 import java.util.Collection;
@@ -24,6 +45,19 @@ import studio.one.application.forums.service.authz.ForumAccessResolver;
 import studio.one.application.forums.service.authz.ForumAuthorizer;
 import studio.one.application.forums.service.authz.PolicyDecision;
 
+/**
+ * 포럼 권한 검증 컴포넌트입니다.
+ * @author  donghyuck, son
+ * @since 2026-02-04
+	 * @version 1.0
+	 *
+	 * <pre>
+	 * &lt;&lt; 개정이력(Modification Information) &gt;&gt;
+	 *   수정일        수정자           수정내용
+	 *  ---------    --------    ---------------------------
+	 * 2026-02-04  donghyuck, son: 최초 생성.
+	 * </pre>
+	 */
 @Component("forumAuthz")
 public class ForumAuthz {
     private final ForumRepository forumRepository;
@@ -50,11 +84,22 @@ public class ForumAuthz {
         this.secretListVisible = secretListVisible;
     }
 
+    /**
+     * 특정 액션에 대해 사용자가 접근 가능한 포럼이 하나라도 있는지 확인합니다. 
+     * @param action
+     * @return
+     */
     public boolean canListForums(String action) {
         PermissionAction permission = PermissionAction.from(action);
         return canListForums(forumAccessResolver.resolveContext().getRoles(), permission);
     }
 
+    /**
+     * 특정 액션에 대해 사용자가 접근 가능한 포럼이 하나라도 있는지 확인합니다.
+     * @param roles
+     * @param action
+     * @return
+     */
     public boolean canListForums(Collection<String> roles, String action) {
         return canListForums(roles, PermissionAction.from(action));
     }
@@ -64,12 +109,22 @@ public class ForumAuthz {
         return !filterForumsByAccess(forums, permission).isEmpty();
     }
 
+    /**
+     * 포럼 목록에서 사용자의 접근 가능 여부를 포함한 가시성 정보를 반환합니다.
+     * @return
+     */
     public ForumListVisibility listVisibility() {
         ForumAccessContext context = forumAccessResolver.resolveContext();
         return new ForumListVisibility(forumAccessResolver.isAdmin(context.getRoles()),
             context.isMember(), secretListVisible, context.getUserId());
     }
 
+    /**
+     * 포럼 목록에서 특정 액션에 대해 사용자가 접근 가능한 포럼만 필터링하여 반환합니다.    
+     * @param forums
+     * @param action
+     * @return
+     */
     public List<Forum> filterForumsByAccess(List<Forum> forums, PermissionAction action) {
         if (forums == null || forums.isEmpty()) {
             return List.of();
@@ -90,6 +145,12 @@ public class ForumAuthz {
         return allowed;
     }
 
+    /**
+     *  포럼에 대한 특정 액션의 접근 가능 여부를 확인합니다.
+     * @param forumId
+     * @param action
+     * @return
+     */
     public boolean canForum(Long forumId, String action) {
         if (forumId == null) {
             return false;
@@ -104,6 +165,13 @@ public class ForumAuthz {
             .orElse(false);
     }
 
+    /**
+     *  포럼에 대한 특정 액션의 접근 가능 여부를 확인합니다.
+     * @param forumId
+     * @param roles
+     * @param action
+     * @return
+     */
     public boolean canForum(Long forumId, Collection<String> roles, String action) {
         if (forumId == null) {
             return false;
@@ -119,6 +187,12 @@ public class ForumAuthz {
             .orElse(false);
     }
 
+    /**
+     *  포럼에 대한 특정 액션의 접근 가능 여부를 확인합니다.
+     * @param forumSlug
+     * @param action
+     * @return
+     */
     public boolean canForum(String forumSlug, String action) {
         if (forumSlug == null || forumSlug.isBlank()) {
             return false;
@@ -133,6 +207,13 @@ public class ForumAuthz {
             .orElseThrow(() -> ForumNotFoundException.bySlug(forumSlug));
     }
 
+    /**
+     *  포럼에 대한 특정 액션의 접근 가능 여부를 확인합니다.
+     * @param forumSlug
+     * @param roles
+     * @param action
+     * @return
+     */
     public boolean canForum(String forumSlug, Collection<String> roles, String action) {
         if (forumSlug == null || forumSlug.isBlank()) {
             return false;
@@ -196,6 +277,13 @@ public class ForumAuthz {
             .orElseThrow(() -> TopicNotFoundException.byId(topicId));
     }
 
+    /**
+     *  포럼에 대한 특정 액션의 접근 가능 여부를 확인합니다.
+     * @param topicId
+     * @param roles
+     * @param action
+     * @return
+     */
     public boolean canTopic(Long topicId, Collection<String> roles, String action) {
         if (topicId == null) {
             return false;
@@ -243,10 +331,11 @@ public class ForumAuthz {
         if (postId == null) {
             return false;
         }
-        if (userId == null) {
+        PermissionAction permission = PermissionAction.from(action);
+        if (userId == null
+            && !(permission == PermissionAction.READ_TOPIC_CONTENT || permission == PermissionAction.READ_ATTACHMENT)) {
             return false;
         }
-        PermissionAction permission = PermissionAction.from(action);
         Set<String> roleSet = normalizeRoles(roles);
         ForumAccessContext context = new ForumAccessContext(roleSet, userId,
             forumAccessResolver.resolveContext().getUsername());
@@ -270,7 +359,8 @@ public class ForumAuthz {
         if (type == ForumType.ADMIN_ONLY) {
             throw TopicNotFoundException.byId(topicId);
         }
-        if (type == ForumType.SECRET && action == PermissionAction.READ_TOPIC_CONTENT) {
+        if (type == ForumType.SECRET
+            && (action == PermissionAction.READ_TOPIC_CONTENT || action == PermissionAction.READ_ATTACHMENT)) {
             throw TopicNotFoundException.byId(topicId);
         }
         return false;
@@ -284,7 +374,8 @@ public class ForumAuthz {
         if (type == ForumType.ADMIN_ONLY) {
             throw PostNotFoundException.byId(postId);
         }
-        if (type == ForumType.SECRET && action == PermissionAction.READ_TOPIC_CONTENT) {
+        if (type == ForumType.SECRET
+            && (action == PermissionAction.READ_TOPIC_CONTENT || action == PermissionAction.READ_ATTACHMENT)) {
             throw PostNotFoundException.byId(postId);
         }
         return false;

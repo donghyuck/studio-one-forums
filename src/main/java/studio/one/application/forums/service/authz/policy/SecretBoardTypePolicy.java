@@ -21,7 +21,7 @@ public class SecretBoardTypePolicy implements ForumTypePolicy {
 
     @Override
     public PolicyDecision decide(PermissionAction action, boolean isMember, boolean isAdmin, boolean isOwner, boolean isLocked) {
-        if (action == PermissionAction.READ_TOPIC_CONTENT) {
+        if (action == PermissionAction.READ_TOPIC_CONTENT || action == PermissionAction.READ_ATTACHMENT) {
             return (isOwner || isAdmin) ? PolicyDecision.ALLOW : PolicyDecision.DENY;
         }
         if (action == PermissionAction.READ_TOPIC_LIST || action == PermissionAction.READ_BOARD) {
@@ -37,7 +37,8 @@ public class SecretBoardTypePolicy implements ForumTypePolicy {
             return isMember ? PolicyDecision.ALLOW : PolicyDecision.DENY;
         }
         if (action == PermissionAction.EDIT_TOPIC || action == PermissionAction.DELETE_TOPIC
-            || action == PermissionAction.EDIT_POST || action == PermissionAction.DELETE_POST) {
+            || action == PermissionAction.EDIT_POST || action == PermissionAction.DELETE_POST
+            || action == PermissionAction.UPLOAD_ATTACHMENT) {
             return (isOwner || isAdmin) ? PolicyDecision.ALLOW : PolicyDecision.DENY;
         }
         if (action == PermissionAction.PIN_TOPIC || action == PermissionAction.LOCK_TOPIC

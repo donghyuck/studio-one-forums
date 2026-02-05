@@ -25,7 +25,14 @@ import studio.one.application.forums.config.ForumWebProperties;
 import studio.one.application.forums.service.post.ForumPostAttachmentService;
 import studio.one.application.forums.web.dto.PostAttachmentDtos;
 import studio.one.platform.web.dto.ApiResponse;
-
+/**
+ * Forums 게시글 첨부파일 REST 컨트롤러.
+ *
+ * <p>개정이력</p>
+ * <pre>
+ * 2026-01-14  Son Donghyuck  최초 생성
+ * </pre>
+ */
 @RestController
 @RequestMapping("${studio.features.forums.web.base-path:/api/forums}/{forumSlug}/topics/{topicId}/posts/{postId}/attachments")
 public class PostAttachmentController {
@@ -33,48 +40,49 @@ public class PostAttachmentController {
     private final ForumWebProperties webProperties;
 
     public PostAttachmentController(ForumPostAttachmentService attachmentService,
-                                    ForumWebProperties webProperties) {
+            ForumWebProperties webProperties) {
         this.attachmentService = attachmentService;
         this.webProperties = webProperties;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("@forumAuthz.canPost(#postId, 'EDIT_POST')")
+    @PreAuthorize("@forumAuthz.canPost(#postId, 'UPLOAD_ATTACHMENT')")
     public ResponseEntity<ApiResponse<PostAttachmentDtos.AttachmentResponse>> upload(@PathVariable String forumSlug,
-                                                                                     @PathVariable Long topicId,
-                                                                                     @PathVariable Long postId,
-                                                                                     @RequestPart("file") MultipartFile file) {
+            @PathVariable Long topicId,
+            @PathVariable Long postId,
+            @RequestPart("file") MultipartFile file) {
         Attachment saved = attachmentService.upload(postId, file);
+
         return ResponseEntity.ok(ApiResponse.ok(toDto(saved, forumSlug, topicId, postId)));
     }
 
     @GetMapping
-    @PreAuthorize("@forumAuthz.canPost(#postId, 'READ_TOPIC_CONTENT')")
+    @PreAuthorize("@forumAuthz.canPost(#postId, 'READ_ATTACHMENT')")
     public ResponseEntity<ApiResponse<List<PostAttachmentDtos.AttachmentResponse>>> list(@PathVariable String forumSlug,
-                                                                                         @PathVariable Long topicId,
-                                                                                         @PathVariable Long postId) {
+            @PathVariable Long topicId,
+            @PathVariable Long postId) {
         List<PostAttachmentDtos.AttachmentResponse> responses = attachmentService.list(postId).stream()
-            .map(att -> toDto(att, forumSlug, topicId, postId))
-            .collect(Collectors.toList());
+                .map(att -> toDto(att, forumSlug, topicId, postId))
+                .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.ok(responses));
     }
 
     @GetMapping("/{attachmentId}")
-    @PreAuthorize("@forumAuthz.canPost(#postId, 'READ_TOPIC_CONTENT')")
+    @PreAuthorize("@forumAuthz.canPost(#postId, 'READ_ATTACHMENT')")
     public ResponseEntity<ApiResponse<PostAttachmentDtos.AttachmentResponse>> get(@PathVariable String forumSlug,
-                                                                                  @PathVariable Long topicId,
-                                                                                  @PathVariable Long postId,
-                                                                                  @PathVariable Long attachmentId) {
+            @PathVariable Long topicId,
+            @PathVariable Long postId,
+            @PathVariable Long attachmentId) {
         Attachment attachment = attachmentService.get(postId, attachmentId);
         return ResponseEntity.ok(ApiResponse.ok(toDto(attachment, forumSlug, topicId, postId)));
     }
 
     @GetMapping("/{attachmentId}/download")
-    @PreAuthorize("@forumAuthz.canPost(#postId, 'READ_TOPIC_CONTENT')")
+    @PreAuthorize("@forumAuthz.canPost(#postId, 'READ_ATTACHMENT')")
     public ResponseEntity<StreamingResponseBody> download(@PathVariable String forumSlug,
-                                                          @PathVariable Long topicId,
-                                                          @PathVariable Long postId,
-                                                          @PathVariable Long attachmentId) {
+            @PathVariable Long topicId,
+            @PathVariable Long postId,
+            @PathVariable Long attachmentId) {
         Attachment attachment = attachmentService.get(postId, attachmentId);
         InputStream inputStream = attachmentService.openStream(postId, attachmentId);
         StreamingResponseBody body = outputStream -> {
@@ -87,29 +95,29 @@ public class PostAttachmentController {
         headers.setContentLength(attachment.getSize());
         if (attachment.getName() != null && !attachment.getName().isBlank()) {
             ContentDisposition disposition = ContentDisposition.attachment()
-                .filename(attachment.getName())
-                .build();
+                    .filename(attachment.getName())
+                    .build();
             headers.setContentDisposition(disposition);
         }
         return ResponseEntity.ok()
-            .headers(headers)
-            .body(body);
+                .headers(headers)
+                .body(body);
     }
 
     @DeleteMapping("/{attachmentId}")
-    @PreAuthorize("@forumAuthz.canPost(#postId, 'EDIT_POST')")
+    @PreAuthorize("@forumAuthz.canPost(#postId, 'UPLOAD_ATTACHMENT')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String forumSlug,
-                                                    @PathVariable Long topicId,
-                                                    @PathVariable Long postId,
-                                                    @PathVariable Long attachmentId) {
+            @PathVariable Long topicId,
+            @PathVariable Long postId,
+            @PathVariable Long attachmentId) {
         attachmentService.delete(postId, attachmentId);
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
     private PostAttachmentDtos.AttachmentResponse toDto(Attachment attachment,
-                                                       String forumSlug,
-                                                       Long topicId,
-                                                       Long postId) {
+            String forumSlug,
+            Long topicId,
+            Long postId) {
         PostAttachmentDtos.AttachmentResponse dto = new PostAttachmentDtos.AttachmentResponse();
         dto.setAttachmentId(attachment.getAttachmentId());
         dto.setName(attachment.getName());
@@ -135,18 +143,18 @@ public class PostAttachmentController {
     private String buildDownloadUrl(String forumSlug, Long topicId, Long postId, Attachment attachment) {
         String normalizedBase = normalizeBasePath(webProperties.getBasePath());
         return ServletUriComponentsBuilder.fromCurrentContextPath()
-            .path(normalizedBase)
-            .pathSegment(
-                forumSlug,
-                "topics",
-                String.valueOf(topicId),
-                "posts",
-                String.valueOf(postId),
-                "attachments",
-                String.valueOf(attachment.getAttachmentId()),
-                "download")
-            .build()
-            .toUriString();
+                .path(normalizedBase)
+                .pathSegment(
+                        forumSlug,
+                        "topics",
+                        String.valueOf(topicId),
+                        "posts",
+                        String.valueOf(postId),
+                        "attachments",
+                        String.valueOf(attachment.getAttachmentId()),
+                        "download")
+                .build()
+                .toUriString();
     }
 
     private String normalizeBasePath(String basePath) {

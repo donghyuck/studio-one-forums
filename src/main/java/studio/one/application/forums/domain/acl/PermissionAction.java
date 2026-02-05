@@ -6,8 +6,10 @@ public enum PermissionAction {
     READ_BOARD,
     READ_TOPIC_LIST,
     READ_TOPIC_CONTENT,
+    READ_ATTACHMENT,
     CREATE_TOPIC,
     REPLY_POST,
+    UPLOAD_ATTACHMENT,
     EDIT_TOPIC,
     DELETE_TOPIC,
     EDIT_POST,
@@ -23,8 +25,10 @@ public enum PermissionAction {
             case READ_BOARD -> "포럼 목록/상세 조회";
             case READ_TOPIC_LIST -> "토픽 목록 조회";
             case READ_TOPIC_CONTENT -> "토픽/댓글 내용 보기";
+            case READ_ATTACHMENT -> "첨부파일 보기/다운로드";
             case CREATE_TOPIC -> "토픽 생성";
             case REPLY_POST -> "토픽에 댓글 작성";
+            case UPLOAD_ATTACHMENT -> "첨부파일 업로드/삭제";
             case EDIT_TOPIC -> "토픽 수정";
             case DELETE_TOPIC -> "토픽 삭제";
             case EDIT_POST -> "작성한 댓글 수정";
