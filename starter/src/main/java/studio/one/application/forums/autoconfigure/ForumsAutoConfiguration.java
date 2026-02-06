@@ -33,6 +33,7 @@ import studio.one.application.forums.config.ForumAttachmentProperties;
 import studio.one.application.forums.persistence.jdbc.CategoryJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.ForumMemberJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.ForumAclRuleJdbcRepositoryAdapter;
+import studio.one.application.forums.persistence.jdbc.ForumAuditLogQueryRepositoryImpl;
 import studio.one.application.forums.persistence.jdbc.ForumJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.PostJdbcRepositoryAdapter;
 import studio.one.application.forums.persistence.jdbc.PostQueryRepositoryImpl;
@@ -55,6 +56,7 @@ import studio.one.application.forums.persistence.jpa.repo.TopicJpaRepository;
 import studio.one.application.forums.web.controller.CategoryMgmtController;
 import studio.one.application.forums.web.controller.CategoryController;
 import studio.one.application.forums.web.controller.ForumAuthzController;
+import studio.one.application.forums.web.controller.ForumAuditLogMgmtController;
 import studio.one.application.forums.web.controller.ForumMemberMgmtController;
 import studio.one.application.forums.web.controller.ForumMgmtController;
 import studio.one.application.forums.web.controller.ForumPermissionController;
@@ -218,6 +220,18 @@ public class ForumsAutoConfiguration {
     @Configuration(proxyBeanMethods = false)
     static class ForumsJdbcQueryConfig {
         @Bean
+        @ConditionalOnMissingBean(ForumAuditLogQueryRepositoryImpl.class)
+        ForumAuditLogQueryRepositoryImpl forumAuditLogQueryRepositoryImpl(
+                @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template,
+                ObjectProvider<I18n> i18nProvider) {
+            I18n i18n = I18nUtils.resolve(i18nProvider);
+            log.info(LogUtils.format(i18n, I18nKeys.AutoConfig.Feature.Service.DETAILS, FEATURE_NAME,
+                    LogUtils.blue(ForumAuditLogQueryRepositoryImpl.class, true),
+                    LogUtils.red(State.CREATED.toString())));
+            return new ForumAuditLogQueryRepositoryImpl(template);
+        }
+
+        @Bean
         @ConditionalOnMissingBean(ForumQueryRepositoryImpl.class)
         ForumQueryRepositoryImpl forumQueryRepositoryImpl(
                 @Qualifier(ServiceNames.NAMED_JDBC_TEMPLATE) NamedParameterJdbcTemplate template,
@@ -264,6 +278,7 @@ public class ForumsAutoConfiguration {
             TopicController.class,
             PostController.class,
             ForumMgmtController.class,
+            ForumAuditLogMgmtController.class,
             ForumMemberMgmtController.class,
             CategoryMgmtController.class,
             TopicMgmtController.class,

@@ -17,6 +17,7 @@ import studio.one.application.forums.domain.repository.ForumRepository;
 import studio.one.application.forums.domain.type.ForumType;
 import studio.one.application.forums.domain.type.ForumViewType;
 import studio.one.application.forums.domain.vo.ForumSlug;
+import studio.one.application.forums.service.audit.ForumAuditLogService;
 import studio.one.application.forums.service.member.ForumMemberService;
 import studio.one.application.forums.service.forum.command.CreateForumCommand;
 import studio.one.application.forums.service.forum.command.UpdateForumSettingsCommand;
@@ -34,13 +35,16 @@ public class ForumCommandService {
     private final ForumRepository forumRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ForumMemberService forumMemberService;
+    private final ForumAuditLogService auditLogService;
 
     public ForumCommandService(ForumRepository forumRepository,
                                ApplicationEventPublisher eventPublisher,
-                               ForumMemberService forumMemberService) {
+                               ForumMemberService forumMemberService,
+                               ForumAuditLogService auditLogService) {
         this.forumRepository = forumRepository;
         this.eventPublisher = eventPublisher;
         this.forumMemberService = forumMemberService;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -73,6 +77,8 @@ public class ForumCommandService {
         );
         Forum saved = forumRepository.save(forum);
         forumMemberService.addOrUpdateMemberRole(saved.id(), command.createdById(), studio.one.application.forums.domain.type.ForumMemberRole.OWNER, command.createdById());
+        auditLogService.record(saved.id(), "FORUM", saved.id(), "CREATE", command.createdById(),
+            Map.of("slug", saved.slug().value()));
         eventPublisher.publishEvent(new ForumCreatedEvent(saved.slug().value(), null, now));
         return saved;
     }
@@ -100,6 +106,8 @@ public class ForumCommandService {
             now
         );
         Forum saved = forumRepository.save(forum);
+        auditLogService.record(saved.id(), "FORUM", saved.id(), "UPDATE", command.updatedById(),
+            Map.of("slug", saved.slug().value()));
         eventPublisher.publishEvent(new ForumUpdatedEvent(saved.slug().value(), null, now));
         return saved;
     }

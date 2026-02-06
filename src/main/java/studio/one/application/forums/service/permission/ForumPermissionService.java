@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -22,6 +23,7 @@ import studio.one.application.forums.domain.model.Forum;
 import studio.one.application.forums.domain.repository.ForumAclRuleRepository;
 import studio.one.application.forums.domain.repository.ForumRepository;
 import studio.one.application.forums.domain.vo.ForumSlug;
+import studio.one.application.forums.service.audit.ForumAuditLogService;
 import studio.one.application.forums.service.authz.AuthorizationDecision;
 import studio.one.application.forums.service.authz.ForumAccessContext;
 import studio.one.application.forums.service.authz.ForumAuthorizer;
@@ -34,6 +36,7 @@ public class ForumPermissionService {
     private final ForumRepository forumRepository;
     private final ForumAclRuleRepository aclRuleRepository;
     private final ForumAuthorizer forumAuthorizer;
+    private final ForumAuditLogService auditLogService;
 
     public List<ForumPermissionDtos.RuleResponse> listRules(String forumSlug, Long categoryId) {
         Forum forum = resolveForum(forumSlug);
@@ -53,7 +56,10 @@ public class ForumPermissionService {
         OffsetDateTime now = OffsetDateTime.now();
         normalizeSubject(request);
         ForumAclRule rule = buildRule(forum, request, actorId, now, now);
-        return toResponse(aclRuleRepository.save(rule));
+        ForumAclRule saved = aclRuleRepository.save(rule);
+        auditLogService.record(forum.id(), "FORUM_ACL", saved.ruleId(), "CREATE", actorId,
+            Map.of("forumSlug", forum.slug().value()));
+        return toResponse(saved);
     }
 
     @Transactional
@@ -66,7 +72,10 @@ public class ForumPermissionService {
                 .orElseThrow(() -> new IllegalArgumentException("rule not found: " + ruleId));
         normalizeSubject(request);
         ForumAclRule updated = mergeRule(existing, request, actorId, now);
-        return toResponse(aclRuleRepository.save(updated));
+        ForumAclRule saved = aclRuleRepository.save(updated);
+        auditLogService.record(forum.id(), "FORUM_ACL", saved.ruleId(), "UPDATE", actorId,
+            Map.of("forumSlug", forum.slug().value()));
+        return toResponse(saved);
     }
 
     @Transactional
@@ -76,6 +85,8 @@ public class ForumPermissionService {
                 .filter(rule -> rule.forumId().equals(forum.id()))
                 .orElseThrow(() -> new IllegalArgumentException("rule not found: " + ruleId));
         aclRuleRepository.delete(existing);
+        auditLogService.record(forum.id(), "FORUM_ACL", existing.ruleId(), "DELETE", actorId,
+            Map.of("forumSlug", forum.slug().value()));
     }
 
     public ForumPermissionDtos.SimulationResponse simulate(String forumSlug, String action, String role,
