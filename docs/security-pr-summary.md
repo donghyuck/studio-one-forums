@@ -15,6 +15,11 @@
 ## Deployment notes
 - Review and align `studio.features.forums.attachments.*` rate-limit and size properties with production traffic
 - Verify top-level Spring Security/JWT/CORS/CSRF settings using `docs/security-followups.md`
+- Client-side upload error mapping should follow `docs/api-error-contract.md`
+
+## Release recommendation
+- Module status: release candidate
+- Rationale: attachment exposure, path mismatch, unsafe upload, and SQL assembly risks addressed within module scope
 
 ## Recommended PR description snippet
 - Risk addressed: unauthorized attachment exposure, path mismatch abuse, unsafe file uploads, and dynamic SQL misuse

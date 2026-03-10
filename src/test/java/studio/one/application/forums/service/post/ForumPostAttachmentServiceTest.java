@@ -2,6 +2,7 @@ package studio.one.application.forums.service.post;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -39,16 +40,50 @@ class ForumPostAttachmentServiceTest {
             .hasMessage("file too large");
     }
 
+    @Test
+    void rejectsSignatureMismatch() {
+        ForumPostAttachmentService service = service();
+        MockMultipartFile file = new MockMultipartFile("file", "payload.png", "image/png", "not-a-png".getBytes());
+
+        assertThatThrownBy(() -> service.upload("general", 10L, 1L, file))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("file signature does not match content type");
+    }
+
+    @Test
+    void rejectsUploadWhenRateLimitExceeded() {
+        AttachmentService attachmentService = mock(AttachmentService.class);
+        ForumResourceGuard resourceGuard = mock(ForumResourceGuard.class);
+        SimpleRateLimiter limiter = mock(SimpleRateLimiter.class);
+        when(limiter.tryAcquire(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.any())).thenReturn(false);
+
+        ForumPostAttachmentService service = service(attachmentService, resourceGuard, limiter);
+        MockMultipartFile file = new MockMultipartFile("file", "payload.txt", "text/plain", "plain-text".getBytes());
+
+        assertThatThrownBy(() -> service.upload("general", 10L, 1L, file))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("upload rate limit exceeded");
+    }
+
     private ForumPostAttachmentService service() {
+        return service(mock(AttachmentService.class), mock(ForumResourceGuard.class), mock(SimpleRateLimiter.class));
+    }
+
+    private ForumPostAttachmentService service(AttachmentService attachmentService,
+                                               ForumResourceGuard resourceGuard,
+                                               SimpleRateLimiter limiter) {
         ForumAttachmentProperties properties = new ForumAttachmentProperties();
         properties.setObjectType(100);
+        when(limiter.tryAcquire(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.any())).thenReturn(true);
         return new ForumPostAttachmentService(
-            mock(AttachmentService.class),
+            attachmentService,
             new SinglePostRepository(),
             properties,
             new EmptyThumbnailProvider(),
-            mock(ForumResourceGuard.class),
-            mock(SimpleRateLimiter.class)
+            resourceGuard,
+            limiter
         );
     }
 

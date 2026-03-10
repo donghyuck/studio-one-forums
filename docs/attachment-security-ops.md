@@ -14,6 +14,7 @@
 - Allowed now: `png`, `jpg`, `jpeg`, `gif`, `pdf`, `txt`
 - Blocked by design: `svg`, `html`, scriptable document formats
 - If product requirements need office documents, add explicit extension/MIME/signature rules instead of broad wildcard allows
+- Module decision: keep the current allowlist as the default release policy
 
 ## Client-facing failure reasons
 - `file too large`
@@ -28,6 +29,7 @@
 - `security_event=attachment_deleted`
 - `security_event=attachment_upload_rejected`
 - `security_event=thumbnail_rejected`
+- Keep current event names stable for this release candidate; add actor/user fields only with a coordinated log schema update
 
 ## Detection guidance
 - Alert on repeated `attachment_upload_rejected reason=signature_mismatch`
