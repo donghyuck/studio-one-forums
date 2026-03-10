@@ -2,6 +2,7 @@ package studio.one.application.forums.web.controller;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import org.springframework.http.CacheControl;
@@ -53,20 +54,9 @@ public class PostAttachmentController {
             @PathVariable Long topicId,
             @PathVariable Long postId,
             @RequestPart("file") MultipartFile file) {
-        Attachment saved = attachmentService.upload(postId, file);
+        Attachment saved = attachmentService.upload(forumSlug, topicId, postId, file);
 
         return ResponseEntity.ok(ApiResponse.ok(toDto(saved, forumSlug, topicId, postId)));
-    }
-
-    @GetMapping
-    @PreAuthorize("@forumAuthz.canPost(#postId, 'READ_ATTACHMENT')")
-    public ResponseEntity<ApiResponse<List<PostAttachmentDtos.AttachmentResponse>>> list(@PathVariable String forumSlug,
-            @PathVariable Long topicId,
-            @PathVariable Long postId) {
-        List<PostAttachmentDtos.AttachmentResponse> responses = attachmentService.list(postId).stream()
-                .map(att -> toDto(att, forumSlug, topicId, postId))
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.ok(responses));
     }
 
     @GetMapping("/{attachmentId}")
@@ -75,7 +65,7 @@ public class PostAttachmentController {
             @PathVariable Long topicId,
             @PathVariable Long postId,
             @PathVariable Long attachmentId) {
-        Attachment attachment = attachmentService.get(postId, attachmentId);
+        Attachment attachment = attachmentService.get(forumSlug, topicId, postId, attachmentId);
         return ResponseEntity.ok(ApiResponse.ok(toDto(attachment, forumSlug, topicId, postId)));
     }
 
@@ -85,8 +75,8 @@ public class PostAttachmentController {
             @PathVariable Long topicId,
             @PathVariable Long postId,
             @PathVariable Long attachmentId) {
-        Attachment attachment = attachmentService.get(postId, attachmentId);
-        InputStream inputStream = attachmentService.openStream(postId, attachmentId);
+        Attachment attachment = attachmentService.get(forumSlug, topicId, postId, attachmentId);
+        InputStream inputStream = attachmentService.openStream(forumSlug, topicId, postId, attachmentId);
         StreamingResponseBody body = outputStream -> {
             try (InputStream in = inputStream) {
                 in.transferTo(outputStream);
@@ -106,14 +96,28 @@ public class PostAttachmentController {
                 .body(body);
     }
 
+    @GetMapping
+    @PreAuthorize("@forumAuthz.canPost(#postId, 'READ_ATTACHMENT')")
+    public ResponseEntity<ApiResponse<List<PostAttachmentDtos.AttachmentResponse>>> list(@PathVariable String forumSlug,
+            @PathVariable Long topicId,
+            @PathVariable Long postId) {
+        List<PostAttachmentDtos.AttachmentResponse> responses = attachmentService.list(forumSlug, topicId, postId).stream()
+                .map(att -> toDto(att, forumSlug, topicId, postId))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.ok(responses));
+    }
+
     @GetMapping("/{attachmentId}/thumbnail")
+    @PreAuthorize("@forumAuthz.canPost(#postId, 'READ_ATTACHMENT')")
     public ResponseEntity<StreamingResponseBody> thumbnail(@PathVariable String forumSlug,
             @PathVariable Long topicId,
             @PathVariable Long postId,
             @PathVariable Long attachmentId,
             @org.springframework.web.bind.annotation.RequestParam(value = "size", required = false, defaultValue = "128") int size,
             @org.springframework.web.bind.annotation.RequestParam(value = "format", required = false, defaultValue = "png") String format) {
-        var result = attachmentService.getThumbnail(postId, attachmentId, size, format);
+        int normalizedSize = normalizeThumbnailSize(size);
+        String normalizedFormat = normalizeThumbnailFormat(format);
+        var result = attachmentService.getThumbnail(forumSlug, topicId, postId, attachmentId, normalizedSize, normalizedFormat);
         if (result.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -130,13 +134,28 @@ public class PostAttachmentController {
                 .body(body);
     }
 
+    private int normalizeThumbnailSize(int size) {
+        if (size < 64 || size > 512) {
+            throw new IllegalArgumentException("thumbnail size must be between 64 and 512");
+        }
+        return size;
+    }
+
+    private String normalizeThumbnailFormat(String format) {
+        String normalized = format == null ? "png" : format.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "png", "jpg", "jpeg", "webp" -> normalized;
+            default -> throw new IllegalArgumentException("unsupported thumbnail format");
+        };
+    }
+
     @DeleteMapping("/{attachmentId}")
-    @PreAuthorize("@forumAuthz.canPost(#postId, 'UPLOAD_ATTACHMENT')")
+    @PreAuthorize("@forumAuthz.canPost(#postId, 'EDIT_POST')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String forumSlug,
             @PathVariable Long topicId,
             @PathVariable Long postId,
             @PathVariable Long attachmentId) {
-        attachmentService.delete(postId, attachmentId);
+        attachmentService.delete(forumSlug, topicId, postId, attachmentId);
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 

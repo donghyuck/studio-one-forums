@@ -5,11 +5,9 @@ import java.util.stream.Collectors;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import studio.one.application.forums.domain.exception.TopicNotFoundException;
-import studio.one.application.forums.domain.model.Topic;
-import studio.one.application.forums.domain.repository.TopicRepository;
 import studio.one.application.forums.persistence.jdbc.PostQueryRepository;
 import studio.one.application.forums.service.post.query.PostSummaryView;
+import studio.one.application.forums.service.support.ForumResourceGuard;
 
 /**
  * Forums 조회 서비스.
@@ -21,23 +19,20 @@ import studio.one.application.forums.service.post.query.PostSummaryView;
  */
 @Service
 public class PostQueryService {
-    private final TopicRepository topicRepository;
     private final PostQueryRepository postQueryRepository;
+    private final ForumResourceGuard forumResourceGuard;
 
-    public PostQueryService(TopicRepository topicRepository, PostQueryRepository postQueryRepository) {
-        this.topicRepository = topicRepository;
+    public PostQueryService(ForumResourceGuard forumResourceGuard, PostQueryRepository postQueryRepository) {
+        this.forumResourceGuard = forumResourceGuard;
         this.postQueryRepository = postQueryRepository;
     }
 
     @Cacheable(cacheResolver = "topicPostListCacheResolver",
                key = "new org.springframework.cache.interceptor.SimpleKey(#pageable)",
                condition = "@environment.getProperty('studio.features.forums.cache.enabled','true') == 'true'")
-    public List<PostSummaryView> listPosts(Long topicId, Pageable pageable, boolean includeDeleted, boolean includeHidden) {
-        Topic topic = topicRepository.findById(topicId)
-            .orElseThrow(() -> TopicNotFoundException.byId(topicId));
-        if (topic.deletedAt() != null) {
-            throw TopicNotFoundException.byId(topicId);
-        }
+    public List<PostSummaryView> listPosts(String forumSlug, Long topicId, Pageable pageable,
+                                           boolean includeDeleted, boolean includeHidden) {
+        var topic = forumResourceGuard.requireTopicInForum(forumSlug, topicId);
         return postQueryRepository.findPosts(topic.id(), pageable, includeDeleted, includeHidden)
             .stream()
             .map(row -> new PostSummaryView(

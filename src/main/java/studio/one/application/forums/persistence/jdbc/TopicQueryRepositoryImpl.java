@@ -9,9 +9,6 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
-import studio.one.platform.data.sqlquery.annotation.SqlMappedStatement;
-import studio.one.platform.data.sqlquery.mapping.BoundSql;
-import studio.one.platform.data.sqlquery.mapping.MappedStatement;
 
 /**
  * Forums JDBC 영속성 어댑터.
@@ -44,13 +41,6 @@ public class TopicQueryRepositoryImpl implements TopicQueryRepository {
     private static final Set<String> SEARCHABLE_FIELDS = Set.of("title", "status");
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
-
-    @SqlMappedStatement("forums.topicList")
-    private MappedStatement topicListStatement;
-
-    @SqlMappedStatement("forums.topicCount")
-    private MappedStatement topicCountStatement;
-
     public TopicQueryRepositoryImpl(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -74,16 +64,7 @@ public class TopicQueryRepositoryImpl implements TopicQueryRepository {
         }
         params.put("limit", pageable.getPageSize());
         params.put("offset", pageable.getOffset());
-
-        Map<String, Object> dynamicParams = Map.of(
-            "selectClause", selectClause,
-            "searchClause", searchClause,
-            "orderClause", orderClause,
-            "includeDeleted", includeDeleted,
-            "includeHiddenPosts", includeHiddenPosts
-        );
-        BoundSql boundSql = topicListStatement.getBoundSql(params, dynamicParams);
-        String sql = boundSql.getSql();
+        String sql = buildListSql(selectClause, searchClause, orderClause, includeDeleted);
 
         return jdbcTemplate.query(sql, params, (rs, rowNum) -> new TopicListRow(
             rs.getLong("topic_id"),
@@ -112,13 +93,33 @@ public class TopicQueryRepositoryImpl implements TopicQueryRepository {
         if (!searchClause.isBlank()) {
             params.put("query", "%" + query + "%");
         }
-        Map<String, Object> dynamicParams = Map.of(
-            "searchClause", searchClause,
-            "includeDeleted", includeDeleted
-        );
-        BoundSql boundSql = topicCountStatement.getBoundSql(params, dynamicParams);
-        Long total = jdbcTemplate.queryForObject(boundSql.getSql(), params, Long.class);
+        Long total = jdbcTemplate.queryForObject(buildCountSql(searchClause, includeDeleted), params, Long.class);
         return total != null ? total : 0L;
+    }
+
+    private String buildListSql(String selectClause, String searchClause, String orderClause, boolean includeDeleted) {
+        StringBuilder sql = new StringBuilder()
+            .append("select ").append(selectClause).append(" ")
+            .append("from tb_application_topics t ")
+            .append("where t.forum_id = :forumId ");
+        if (!includeDeleted) {
+            sql.append("and t.deleted_at is null ");
+        }
+        sql.append(searchClause)
+            .append(orderClause)
+            .append(" limit :limit offset :offset");
+        return sql.toString();
+    }
+
+    private String buildCountSql(String searchClause, boolean includeDeleted) {
+        StringBuilder sql = new StringBuilder()
+            .append("select count(1) from tb_application_topics t ")
+            .append("where t.forum_id = :forumId ");
+        if (!includeDeleted) {
+            sql.append("and t.deleted_at is null ");
+        }
+        sql.append(searchClause);
+        return sql.toString();
     }
 
     private String buildSelect(Set<String> fields, boolean includeHiddenPosts) {

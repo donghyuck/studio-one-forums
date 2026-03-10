@@ -4,12 +4,11 @@ import java.time.OffsetDateTime;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import studio.one.application.forums.domain.event.TopicCreatedEvent;
 import studio.one.application.forums.domain.event.TopicStatusChangedEvent;
 import studio.one.application.forums.domain.exception.CategoryForumMismatchException;
 import studio.one.application.forums.domain.exception.CategoryNotFoundException;
-import studio.one.application.forums.domain.exception.ForumNotFoundException;
-import studio.one.application.forums.domain.exception.TopicNotFoundException;
 import studio.one.application.forums.domain.exception.TopicStatusTransitionNotAllowedException;
 import studio.one.application.forums.domain.exception.TopicVersionMismatchException;
 import studio.one.application.forums.domain.model.Category;
@@ -28,6 +27,7 @@ import studio.one.application.forums.service.topic.command.DeleteTopicCommand;
 import studio.one.application.forums.service.topic.command.LockTopicCommand;
 import studio.one.application.forums.service.topic.command.PinTopicCommand;
 import studio.one.application.forums.service.topic.command.UpdateTopicCommand;
+import studio.one.application.forums.service.support.ForumResourceGuard;
 
 /**
  * Forums 명령 서비스.
@@ -38,21 +38,22 @@ import studio.one.application.forums.service.topic.command.UpdateTopicCommand;
  * </pre>
  */
 @Service
+@Slf4j
 public class TopicCommandService {
-    private final ForumRepository forumRepository;
+    private final ForumResourceGuard forumResourceGuard;
     private final CategoryRepository categoryRepository;
     private final TopicRepository topicRepository;
     private final TopicStatusPolicy topicStatusPolicy;
     private final ApplicationEventPublisher eventPublisher;
     private final ForumAuditLogService auditLogService;
 
-    public TopicCommandService(ForumRepository forumRepository,
+    public TopicCommandService(ForumResourceGuard forumResourceGuard,
                                CategoryRepository categoryRepository,
                                TopicRepository topicRepository,
                                TopicStatusPolicy topicStatusPolicy,
                                ApplicationEventPublisher eventPublisher,
                                ForumAuditLogService auditLogService) {
-        this.forumRepository = forumRepository;
+        this.forumResourceGuard = forumResourceGuard;
         this.categoryRepository = categoryRepository;
         this.topicRepository = topicRepository;
         this.topicStatusPolicy = topicStatusPolicy;
@@ -62,8 +63,7 @@ public class TopicCommandService {
 
     @Transactional
     public Topic createTopic(CreateTopicCommand command) {
-        Forum forum = forumRepository.findBySlug(ForumSlug.of(command.forumSlug()))
-            .orElseThrow(() -> ForumNotFoundException.bySlug(command.forumSlug()));
+        Forum forum = forumResourceGuard.requireForum(command.forumSlug());
         Long categoryId = null;
         if (command.categoryId() != null) {
             Category category = categoryRepository.findById(command.categoryId())
@@ -95,16 +95,13 @@ public class TopicCommandService {
         );
         Topic saved = topicRepository.save(topic);
         eventPublisher.publishEvent(new TopicCreatedEvent(command.forumSlug(), saved.id(), now));
+        log.info("topic created: forumSlug={}, topicId={}", command.forumSlug(), saved.id());
         return saved;
     }
 
     @Transactional
     public Topic changeStatus(ChangeTopicStatusCommand command) {
-        Topic topic = topicRepository.findById(command.topicId())
-            .orElseThrow(() -> TopicNotFoundException.byId(command.topicId()));
-        if (topic.deletedAt() != null) {
-            throw TopicNotFoundException.byId(command.topicId());
-        }
+        Topic topic = forumResourceGuard.requireTopicInForum(command.forumSlug(), command.topicId());
         if (topic.version() != command.expectedVersion()) {
             throw TopicVersionMismatchException.byId(command.topicId());
         }
@@ -115,31 +112,27 @@ public class TopicCommandService {
         topic.changeStatus(command.status(), command.updatedById(), command.updatedBy(), now);
         Topic saved = topicRepository.save(topic);
         eventPublisher.publishEvent(new TopicStatusChangedEvent(command.forumSlug(), saved.id(), now));
+        log.info("topic status changed: forumSlug={}, topicId={}, status={}",
+            command.forumSlug(), saved.id(), command.status());
         return saved;
     }
 
     @Transactional
     public Topic updateTopic(UpdateTopicCommand command) {
-        Topic topic = topicRepository.findById(command.topicId())
-            .orElseThrow(() -> TopicNotFoundException.byId(command.topicId()));
-        if (topic.deletedAt() != null) {
-            throw TopicNotFoundException.byId(command.topicId());
-        }
+        Topic topic = forumResourceGuard.requireTopicInForum(command.forumSlug(), command.topicId());
         if (topic.version() != command.expectedVersion()) {
             throw TopicVersionMismatchException.byId(command.topicId());
         }
         OffsetDateTime now = OffsetDateTime.now();
         topic.updateContent(command.title(), command.tags(), command.updatedById(), command.updatedBy(), now);
-        return topicRepository.save(topic);
+        Topic saved = topicRepository.save(topic);
+        log.info("topic updated: forumSlug={}, topicId={}", command.forumSlug(), saved.id());
+        return saved;
     }
 
     @Transactional
     public Topic pinTopic(PinTopicCommand command) {
-        Topic topic = topicRepository.findById(command.topicId())
-            .orElseThrow(() -> TopicNotFoundException.byId(command.topicId()));
-        if (topic.deletedAt() != null) {
-            throw TopicNotFoundException.byId(command.topicId());
-        }
+        Topic topic = forumResourceGuard.requireTopicInForum(command.forumSlug(), command.topicId());
         if (topic.version() != command.expectedVersion()) {
             throw TopicVersionMismatchException.byId(command.topicId());
         }
@@ -147,16 +140,14 @@ public class TopicCommandService {
         topic.setPinned(command.pinned(), command.updatedById(), command.updatedBy(), now);
         Topic saved = topicRepository.save(topic);
         auditLogService.record(saved.forumId(), "TOPIC", saved.id(), "PIN", command.updatedById(), null);
+        log.info("topic pin changed: forumSlug={}, topicId={}, pinned={}",
+            command.forumSlug(), saved.id(), command.pinned());
         return saved;
     }
 
     @Transactional
     public Topic lockTopic(LockTopicCommand command) {
-        Topic topic = topicRepository.findById(command.topicId())
-            .orElseThrow(() -> TopicNotFoundException.byId(command.topicId()));
-        if (topic.deletedAt() != null) {
-            throw TopicNotFoundException.byId(command.topicId());
-        }
+        Topic topic = forumResourceGuard.requireTopicInForum(command.forumSlug(), command.topicId());
         if (topic.version() != command.expectedVersion()) {
             throw TopicVersionMismatchException.byId(command.topicId());
         }
@@ -164,13 +155,14 @@ public class TopicCommandService {
         topic.setLocked(command.locked(), command.updatedById(), command.updatedBy(), now);
         Topic saved = topicRepository.save(topic);
         auditLogService.record(saved.forumId(), "TOPIC", saved.id(), "LOCK", command.updatedById(), null);
+        log.info("topic lock changed: forumSlug={}, topicId={}, locked={}",
+            command.forumSlug(), saved.id(), command.locked());
         return saved;
     }
 
     @Transactional
     public Topic deleteTopic(DeleteTopicCommand command) {
-        Topic topic = topicRepository.findById(command.topicId())
-            .orElseThrow(() -> TopicNotFoundException.byId(command.topicId()));
+        Topic topic = forumResourceGuard.requireTopicInForum(command.forumSlug(), command.topicId());
         if (topic.version() != command.expectedVersion()) {
             throw TopicVersionMismatchException.byId(command.topicId());
         }
@@ -179,6 +171,7 @@ public class TopicCommandService {
         topic.setLocked(true, command.deletedById(), command.deletedBy(), now);
         Topic saved = topicRepository.save(topic);
         auditLogService.record(saved.forumId(), "TOPIC", saved.id(), "DELETE", command.deletedById(), null);
+        log.info("topic deleted: forumSlug={}, topicId={}", command.forumSlug(), saved.id());
         return saved;
     }
 }

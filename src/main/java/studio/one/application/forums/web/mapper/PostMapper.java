@@ -19,9 +19,9 @@ public class PostMapper {
         return new CreatePostCommand(forumSlug, topicId, request.getContent(), createdById, createdBy);
     }
 
-    public UpdatePostCommand toUpdateCommand(Long postId, PostDtos.UpdatePostRequest request,
+    public UpdatePostCommand toUpdateCommand(String forumSlug, Long topicId, Long postId, PostDtos.UpdatePostRequest request,
                                              Long updatedById, String updatedBy, long version) {
-        return new UpdatePostCommand(postId, request.getContent(), updatedById, updatedBy, version);
+        return new UpdatePostCommand(forumSlug, topicId, postId, request.getContent(), updatedById, updatedBy, version);
     }
 
     public PostDtos.PostResponse toResponse(PostSummaryView view) {

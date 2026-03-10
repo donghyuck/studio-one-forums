@@ -41,7 +41,9 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-cache")
     compileOnly("com.github.ben-manes.caffeine:caffeine")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-security")
     testImplementation("org.springframework.data:spring-data-commons")
+    testImplementation("studio.one.modules:attachment-service:${property("studioOneVersion")}")
     // lombok optional
     val lombokVersion: String = project.findProperty("lombokVersion") as String? ?: "1.18.30"
     compileOnly("org.projectlombok:lombok:$lombokVersion")

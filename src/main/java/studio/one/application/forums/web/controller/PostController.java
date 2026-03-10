@@ -52,7 +52,7 @@ public class PostController {
                                                                              @RequestParam(required = false, defaultValue = "false") boolean includeDeleted,
                                                                              @RequestParam(required = false, defaultValue = "false") boolean includeHidden,
                                                                              Pageable pageable) {
-        List<PostDtos.PostResponse> responses = postQueryService.listPosts(topicId, pageable, includeDeleted, includeHidden)
+        List<PostDtos.PostResponse> responses = postQueryService.listPosts(forumSlug, topicId, pageable, includeDeleted, includeHidden)
             .stream()
             .map(postMapper::toResponse)
             .collect(Collectors.toList());
@@ -86,7 +86,7 @@ public class PostController {
         Long updatedById = requireUserId(userId);
         String updatedBy = requireUsername(username);
         long expectedVersion = EtagUtil.parseIfMatchVersion(ifMatch);
-        postCommandService.updatePost(postMapper.toUpdateCommand(postId, request, updatedById, updatedBy, expectedVersion));
+        postCommandService.updatePost(postMapper.toUpdateCommand(forumSlug, topicId, postId, request, updatedById, updatedBy, expectedVersion));
         return ResponseEntity.ok(ApiResponse.ok(Map.of("postId", postId, "updated", true)));
     }
 
@@ -101,7 +101,7 @@ public class PostController {
         Long deletedById = requireUserId(userId);
         String deletedBy = requireUsername(username);
         long expectedVersion = EtagUtil.parseIfMatchVersion(ifMatch);
-        postCommandService.deletePost(new DeletePostCommand(postId, deletedById, deletedBy, expectedVersion));
+        postCommandService.deletePost(new DeletePostCommand(forumSlug, topicId, postId, deletedById, deletedBy, expectedVersion));
         return ResponseEntity.ok(ApiResponse.ok(Map.of("postId", postId, "deleted", true)));
     }
 

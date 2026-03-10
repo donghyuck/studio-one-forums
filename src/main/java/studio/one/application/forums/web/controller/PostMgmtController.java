@@ -66,7 +66,7 @@ public class PostMgmtController {
         Long updatedById = requireUserId(userId);
         String updatedBy = requireUsername(username);
         long expectedVersion = EtagUtil.parseIfMatchVersion(ifMatch);
-        postCommandService.updatePost(postMapper.toUpdateCommand(postId, request, updatedById, updatedBy, expectedVersion));
+        postCommandService.updatePost(postMapper.toUpdateCommand(forumSlug, topicId, postId, request, updatedById, updatedBy, expectedVersion));
         return ResponseEntity.ok(ApiResponse.ok(Map.of("postId", postId, "updated", true)));
     }
 
@@ -82,7 +82,7 @@ public class PostMgmtController {
         Long updatedById = requireUserId(userId);
         String updatedBy = requireUsername(username);
         long expectedVersion = EtagUtil.parseIfMatchVersion(ifMatch);
-        postCommandService.hidePost(new HidePostCommand(postId, request.isHidden(), request.getReason(),
+        postCommandService.hidePost(new HidePostCommand(forumSlug, topicId, postId, request.isHidden(), request.getReason(),
             updatedById, updatedBy, expectedVersion));
         return ResponseEntity.ok(ApiResponse.ok(Map.of("postId", postId, "hidden", request.isHidden())));
     }
@@ -98,7 +98,7 @@ public class PostMgmtController {
         Long deletedById = requireUserId(userId);
         String deletedBy = requireUsername(username);
         long expectedVersion = EtagUtil.parseIfMatchVersion(ifMatch);
-        postCommandService.deletePost(new DeletePostCommand(postId, deletedById, deletedBy, expectedVersion));
+        postCommandService.deletePost(new DeletePostCommand(forumSlug, topicId, postId, deletedById, deletedBy, expectedVersion));
         return ResponseEntity.ok(ApiResponse.ok(Map.of("postId", postId, "deleted", true)));
     }
 
