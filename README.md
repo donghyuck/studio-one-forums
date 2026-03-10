@@ -454,3 +454,8 @@ features.forums.persistence=jdbc
   "granting": true
 }
 ```
+## Security Notes
+
+- Attachment and forum security operating guidance: [docs/attachment-security-ops.md](docs/attachment-security-ops.md)
+- Platform-level Spring Security, JWT, CORS, CSRF follow-ups: [docs/security-followups.md](docs/security-followups.md)
+- PR-ready summary for recent security hardening: [docs/security-pr-summary.md](docs/security-pr-summary.md)
