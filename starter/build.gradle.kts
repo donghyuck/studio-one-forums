@@ -30,6 +30,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:$lombokVersion")
 	testCompileOnly("org.projectlombok:lombok:$lombokVersion")
     testAnnotationProcessor("org.projectlombok:lombok:$lombokVersion")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
 dependencyManagement {
