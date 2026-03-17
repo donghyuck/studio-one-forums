@@ -262,16 +262,15 @@ public class ForumJdbcRepositoryAdapter implements ForumRepository {
     }
 
     private Forum update(Forum forum) {
-        Map<String, Object> params = Map.of(
-            "id", forum.id(),
-            "name", forum.name(),
-            "description", forum.description(),
-            "type", (forum.type() != null ? forum.type() : ForumType.COMMON).name(),
-            "updatedById", forum.updatedById(),
-            "updatedBy", forum.updatedBy(),
-            "updatedAt", forum.updatedAt(),
-            "version", forum.version()
-        );
+        MapSqlParameterSource params = new MapSqlParameterSource()
+            .addValue("id", forum.id())
+            .addValue("name", forum.name())
+            .addValue("description", forum.description())
+            .addValue("type", (forum.type() != null ? forum.type() : ForumType.COMMON).name())
+            .addValue("updatedById", forum.updatedById())
+            .addValue("updatedBy", forum.updatedBy())
+            .addValue("updatedAt", forum.updatedAt())
+            .addValue("version", forum.version());
         int updated = jdbcTemplate.update(forumUpdateSql, params);
         if (updated == 0) {
             throw ForumVersionMismatchException.bySlug(forum.slug().value());
