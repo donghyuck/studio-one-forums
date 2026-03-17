@@ -10,6 +10,7 @@
 ## 필수 원칙
 0. 지침 우선순위 원칙
 - AI 작업 시 저장소의 `AGENTS.md` 및 활성화된 `SKILL` 지침을 우선 적용한다.
+- 저장소에 `AGENTS.md`가 없으면 본 저장소의 정책 문서와 세션에 주어진 기본 지침을 적용 기준으로 삼는다.
 - `SKILL` 지침과 일반 규칙이 충돌하면, 더 구체적이고 범위가 좁은 지침(`SKILL`)을 우선한다.
 - `SKILL` 미준수로 발생한 변경은 리뷰에서 반려할 수 있다.
 
@@ -27,6 +28,16 @@
 4. 최소 변경 원칙
 - 범위를 벗어난 리팩터링/형식 변경을 함께 수행하지 않는다.
 - 정책/절차 문서는 단일 소스 문서로 유지하고 중복 서술을 피한다.
+
+5. 이슈 템플릿 기록 원칙
+- 이슈 작성 시 `.github/ISSUE_TEMPLATE/bug_report.md` 또는 `.github/ISSUE_TEMPLATE/feature_request.md`를 사용한다.
+- `Size` 항목은 `Small/Medium/Large` 중 정확히 하나만 체크한다.
+- `Size` 기준은 다음과 같다.
+  - `Small (1)`: 단순 수정 / 단일 파일
+  - `Medium (2)`: 기능 단위 변경 / 다중 파일
+  - `Large (3)`: 구조 변경 / 복수 모듈
+- `AI-Assisted` 항목은 `Yes/No` 중 정확히 하나만 체크한다.
+- AI를 사용한 작업은 반드시 `Yes`를 체크한다.
 
 ## AI 커밋 메시지 규칙
 1. AI 보조 커밋 제목은 반드시 `[ai-assisted]`로 시작한다.
@@ -53,7 +64,44 @@
 
 3. 항목 구성은 날짜별 섹션 내 `변경됨`/`검증`을 기본으로 한다.
 
+## CI/리뷰 운영 원칙
+
+AI 개발 정책은 문서 규칙과 저장소의 검증 태스크, PR/MR 리뷰 절차를 함께 사용해 운영한다.
+
+### 1. 커밋 메시지 검사
+다음 규칙은 리뷰 또는 자동화 수단으로 확인할 수 있다.
+
+- AI 커밋은 `[ai-assisted]` prefix 사용
+- 커밋 형식: `<type>(<scope>): <summary>`
+- 허용 타입: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+
+예:
+[ai-assisted] feat(user): add login API
+
+### 2. 검증 기록 확인
+AI로 생성된 변경은 다음 중 하나 이상의 검증을 포함해야 한다.
+
+- build 실행
+- unit test 실행
+- smoke test 수행
+
+검증 명령은 커밋 또는 PR 본문에 기록한다.
+
+### 3. PR/MR 검사
+Pull Request(Merge Request) 단계에서 다음을 확인한다.
+
+- 저장소 검증 태스크 또는 CI build 성공
+- 최소 1명 이상의 리뷰 승인
+- 정책 위반 커밋 여부
+
+### 4. 보안 검사 권장
+AI 생성 코드에 대해 다음 검사를 권장한다.
+
+- dependency vulnerability scan
+- static code analysis
+- secret scanning
+
 ## 문서 관계(중복 방지)
 - 개발 참여 절차: `CONTRIBUTING.md`
 - AI 상세 규칙: `AI_DEVELOPMENT_POLICY.md` (본 문서)
-- 레거시 커밋 정책 문서: `docs/dev/ai-commit-policy.md` (참조 포인터)
+- AI 커밋 템플릿: `.gitmessage-ai-assisted.txt`
