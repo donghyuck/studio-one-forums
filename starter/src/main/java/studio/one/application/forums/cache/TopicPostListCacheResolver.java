@@ -48,13 +48,33 @@ public class TopicPostListCacheResolver implements CacheResolver {
     @Override
     public Collection<? extends Cache> resolveCaches(CacheOperationInvocationContext<?> context) {
         Object[] args = context.getArgs();
-        if (args.length == 0 || args[0] == null) {
+        if (args.length < 2) {
             return Collections.emptyList();
         }
-        Long topicId = (Long) args[0];
+        Long topicId = toLong(args[1]);
+        if (topicId == null) {
+            return Collections.emptyList();
+        }
         String cacheName = CacheNames.Post.listCacheName(topicId);
         Cache cache = resolveCache(cacheName);
         return cache == null ? Collections.emptyList() : Collections.singletonList(cache);
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private Cache resolveCache(String cacheName) {
