@@ -7,8 +7,8 @@
 - 기능 개발 및 버그 수정은 Issue 기반 진행을 원칙으로 하며, Merge Request는 표준 템플릿 사용을 권장한다.
 - 긴급 수정이나 저장소 관리자 직접 반영처럼 Issue 생성이 어려운 경우에는 커밋 또는 MR 본문에 변경 배경을 남긴다.
 - 이슈/머지리퀘스트 작성 시 저장소 템플릿을 기본으로 사용한다.
-  - Issue: `.gitlab/issue_templates/default.md`
-  - Merge Request: `.gitlab/merge_request_templates/default.md`
+  - Issue: `.github/ISSUE_TEMPLATE/bug_report.md`, `.github/ISSUE_TEMPLATE/feature_request.md`
+  - Pull Request: `.github/pull_request_template.md`
 - Issue 템플릿의 `Size`는 `Small/Medium/Large` 중 정확히 하나를 체크한다.
   - `Small (1)`: 단순 수정 / 단일 파일
   - `Medium (2)`: 기능 단위 변경 / 다중 파일

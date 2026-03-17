@@ -30,7 +30,7 @@
 - 정책/절차 문서는 단일 소스 문서로 유지하고 중복 서술을 피한다.
 
 5. 이슈 템플릿 기록 원칙
-- 이슈 작성 시 `.gitlab/issue_templates/default.md`를 사용한다.
+- 이슈 작성 시 `.github/ISSUE_TEMPLATE/bug_report.md` 또는 `.github/ISSUE_TEMPLATE/feature_request.md`를 사용한다.
 - `Size` 항목은 `Small/Medium/Large` 중 정확히 하나만 체크한다.
 - `Size` 기준은 다음과 같다.
   - `Small (1)`: 단순 수정 / 단일 파일
